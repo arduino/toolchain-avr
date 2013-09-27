@@ -21,13 +21,14 @@ cd gcc-build
 
 CONFARGS=" \
 	--enable-languages=c,c++ \
-        --prefix=$PREFIX \
-        --enable-long-long \
-        --disable-nls \
-        --disable-checking \
+	--prefix=$PREFIX \
+	--enable-long-long \
+	--disable-nls \
+	--disable-checking \
 	--disable-libssp \
+	--disable-shared \
 	--with-dwarf2 \
-        --target=avr"
+	--target=avr"
 
 CFLAGS=-w CXXFLAGS=-w ../gcc-4.3.2/configure $CONFARGS
 

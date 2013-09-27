@@ -18,8 +18,9 @@ mkdir -p avr-libc-build
 cd avr-libc-build
 
 CONFARGS=" \
-        --prefix=$PREFIX \
-        --host=avr"
+	--prefix=$PREFIX \
+	--disable-shared \
+	--host=avr"
 
 PATH=$PREFIX/bin:$PATH CFLAGS=-w CXXFLAGS=-w ../avr-libc-1.6.4/configure $CONFARGS
 

@@ -21,10 +21,11 @@ cd binutils-build
 
 CONFARGS=" \
 	--enable-languages=c,c++ \
-        --prefix=$PREFIX \
-        --disable-nls \
+	--prefix=$PREFIX \
+	--disable-nls \
+	--disable-shared \
 	--with-dwarf2 \
-        --target=avr"
+	--target=avr"
 
 CFLAGS=-w CXXFLAGS=-w ../binutils-2.20.1/configure $CONFARGS
 
