@@ -1,0 +1,19 @@
+Source: gcc-avr
+Section: devel
+Priority: extra
+Maintainer: Hakan Ardo <hakan@debian.org>
+Standards-Version: 3.5.3
+Build-Depends: m4, autoconf (>= 2.13), libtool, gawk, bzip2, binutils-avr (>= 2.18-4), bison, flex, gettext, texinfo, zlib1g-dev, debhelper (>= 4.2.10), tar (>= 1.13.18), automake1.9, dbs (>=0.43), gcc-4.3-source(>=4.3.2-1), libmpfr-dev
+Build-Conflicts: libgcc0, libgcc300
+
+Package: gcc-avr
+Architecture: any
+Section: devel
+Priority: extra
+Conflicts: avr-libc(<=1:1.6.2-1)
+Depends: ${shlibs:Depends}, binutils-avr (>= 2.18-4)
+Provides: c-compiler-avr
+Suggests: task-c-devel, gcc-doc (>= 4:4.0.2-1), gcc-4.2, avr-libc(>=1:1.6.2-2)
+Description: The GNU C compiler (cross compiler for avr)
+ This is the GNU C compiler, a fairly portable optimizing compiler which
+ supports multiple languages.  This package includes support for C.

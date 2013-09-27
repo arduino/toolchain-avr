@@ -1,0 +1,97 @@
+--- gcc/config/avr/avr.c.orig   Sat May 12 15:32:41 2001
++++ gcc/config/avr/avr.c        Sat Oct  6 01:04:15 2001
+@@ -562,7 +562,7 @@
+       fprintf (file,"\tsei\n");
+       ++prologue_size;
+     }
+-  if (interrupt_func_p | signal_func_p)
++  if (interrupt_func_p || signal_func_p)
+     {
+       fprintf (file, "\t"
+                AS1 (push,__zero_reg__)   CR_TAB
+@@ -574,14 +574,23 @@
+     }
+   if (main_p)
+     {
+-      fprintf (file, ("\t" 
+-                     AS2 (ldi,r28,lo8(%s - %d)) CR_TAB
+-                     AS2 (ldi,r29,hi8(%s - %d)) CR_TAB
+-                     AS2 (out,__SP_H__,r29)     CR_TAB
+-                     AS2 (out,__SP_L__,r28) "\n"),
+-              avr_init_stack, size, avr_init_stack, size);
++      if (!TARGET_TINY_STACK) {
++        fprintf (file, ("\t" 
++                       AS2 (ldi,r28,lo8(%s - %d)) CR_TAB
++                       AS2 (ldi,r29,hi8(%s - %d)) CR_TAB
++                       AS2 (out,__SP_H__,r29)     CR_TAB
++                       AS2 (out,__SP_L__,r28) "\n"),
++                avr_init_stack, size, avr_init_stack, size);
+       
+-      prologue_size += 4;
++        prologue_size += 4;
++      } else {
++        fprintf (file, ("\t" 
++                       AS2 (ldi,r28,lo8(%s - %d)) CR_TAB
++                       AS2 (out,__SP_L__,r28) "\n"),
++                avr_init_stack, size);
++      
++        prologue_size += 2;
++      }
+     }
+   else if (minimize && (frame_pointer_needed || live_seq > 6)) 
+     {
+@@ -613,7 +622,8 @@
+     {
+       for (reg = 0; reg < 32; ++reg)
+        {
+-         if ((!leaf_func_p
++         if (!fixed_regs[reg] &&
++             ((!leaf_func_p
+               && (call_used_regs[reg]
+                   && (interrupt_func_p || signal_func_p)
+                   && !(reg == TMP_REGNO || reg == ZERO_REGNO)))
+@@ -621,7 +631,7 @@
+                  && (!call_used_regs[reg]
+                      || interrupt_func_p || signal_func_p)
+                  && ! (frame_pointer_needed
+-                       && (reg == REG_Y || reg == (REG_Y+1)))))
++                       && (reg == REG_Y || reg == (REG_Y+1))))))
+            {
+              fprintf (file, "\t" AS1 (push,%s) "\n", avr_regnames[reg]);
+              ++prologue_size;
+@@ -737,7 +747,7 @@
+              fputs ("\t", file);
+              epilogue_size += out_adj_frame_ptr (file, -size);
+ 
+-             if (interrupt_func_p | signal_func_p)
++             if (interrupt_func_p || signal_func_p)
+                {
+                  epilogue_size += out_set_stack_ptr (file, -1, 0);
+                }
+@@ -754,7 +764,8 @@
+ 
+       for (reg = 31; reg >= 0; --reg)
+        {
+-         if ((!leaf_func_p
++         if (!fixed_regs[reg] &&
++             ((!leaf_func_p
+               && (call_used_regs[reg]
+                   && (interrupt_func_p || signal_func_p)
+                   && !(reg == TMP_REGNO || reg == ZERO_REGNO)))
+@@ -762,14 +773,14 @@
+                  && (!call_used_regs[reg]
+                      || interrupt_func_p || signal_func_p)
+                  && ! (frame_pointer_needed
+-                       && (reg == REG_Y || reg == (REG_Y+1)))))
++                       && (reg == REG_Y || reg == (REG_Y+1))))))
+            {
+              fprintf (file, "\t" AS1 (pop,%s) "\n", avr_regnames[reg]);
+              ++epilogue_size;
+            }
+        }
+       
+-      if (interrupt_func_p | signal_func_p)
++      if (interrupt_func_p || signal_func_p)
+        {
+          fprintf (file, "\t"
+                   AS1 (pop,__tmp_reg__)      CR_TAB

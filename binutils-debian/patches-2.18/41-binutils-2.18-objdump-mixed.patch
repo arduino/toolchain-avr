@@ -1,0 +1,19 @@
+Not committed.
+Needs bug report filed
+--------------------------------------------------------------------------------
+diff -Nbaur binutils-2.18.50/binutils/objdump.c binutils-2.18.50-mod/binutils/objdump.c
+--- binutils/objdump.c Thu Feb  7 16:04:47 2008
++++ binutils/objdump.c     Thu Feb  7 16:02:11 2008
+@@ -964,7 +964,12 @@
+ #endif
+   const char *map;
+   struct stat st;
++  
++#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN32__
++  int fd = open (fn, O_RDONLY | O_BINARY);
++#else
+   int fd = open (fn, O_RDONLY);
++#endif
+ 
+   if (fd < 0)
+     return NULL;

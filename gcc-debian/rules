@@ -1,0 +1,174 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+TARGET=avr
+TARGET_ARCH=avr
+PACKAGE=gcc-avr
+
+ifeq (,$(DEB_BUILD_GNU_TYPE))
+  include /usr/share/dbs/dpkg-arch.mk
+endif
+
+CONFARGS = -v \
+        --enable-languages=c,c++ \
+        --prefix=/usr/lib \
+        --infodir=/usr/share/info \
+        --mandir=/usr/share/man \
+	--bindir=/usr/bin \
+	--libexecdir=/usr/lib \
+	--libdir=/usr/lib \
+        --enable-shared \
+        --with-system-zlib \
+        --enable-long-long \
+        --enable-nls \
+        --without-included-gettext \
+        --disable-checking \
+	--disable-libssp \
+        --build=$(DEB_BUILD_GNU_TYPE) \
+        --host=$(DEB_HOST_GNU_TYPE) \
+        --target=$(TARGET) \
+
+
+srcdir=src
+
+# Patches
+#patch_stamp=patch-stamp
+#debian_patches = gcc_avr_fixed_reg
+#include /usr/src/toolchain/patches/gcc/rules.patch
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+# This is the debhelper compatability version to use.
+export DH_COMPAT=4
+
+TAR_DIR=gcc-*
+#include /usr/share/dbs/dbs-build.mk
+include /usr/src/gcc-4.3/rules.source
+#include debian/rules-gfdlstuff.mk
+
+#unpack: unpack-stamp
+#unpack-stamp:
+#	tar xjf /usr/src/toolchain/gcc.tar.bz2
+#	mv gcc-* src
+#	mkdir build
+#
+#	touch unpack-stamp
+
+BUILD_TREE=src
+
+patched-stamp:=$(STAMP_DIR)/patched-stamp
+
+patch-stamp:
+#	cd $(BUILD_TREE) && patch -p0 < ../debian/patches/patch-0b-with-testsuite.diff
+#	cd $(BUILD_TREE) && patch -p0 < ../debian/patches/patch-avr6.diff
+	cd $(BUILD_TREE) && for p in ../debian/patches/*.patch; do echo Applying $$p; patch -p0 < $$p; done
+	touch patch-stamp
+
+configure: configure-stamp
+#configure-stamp: $(patched)
+configure-stamp: $(unpack_stamp) patch-stamp
+	dh_testdir
+	rm -f $(BUILD_TREE)/gcc/doc/*.1
+	rm -f $(BUILD_TREE)/gcc/doc/*.info
+	#for i in $(gfdl_texinfo_files); do \
+	#  cp debian/dummy.texi `echo $(BUILD_TREE)`/$$i; \
+	#done
+	#for i in $(gfdl_toplevel_texinfo_files); do \
+	#  n=$$(basename $$i .texi); \
+	#  sed "s/@name@/$$n/g" debian/gcc-dummy.texi > `echo $(BUILD_TREE)`/$$i; \
+	#done
+	mkdir -p objdir
+	# Add here commands to configure the package.
+	cd objdir && env CC="gcc" `echo ../$(BUILD_TREE)`/configure $(CONFARGS) 
+	touch configure-stamp
+
+build: configure-stamp build-stamp
+build-stamp: patch-stamp
+	dh_testdir
+
+	# Add here commands to compile the package.
+	cd objdir && $(MAKE)
+	#/usr/bin/docbook-to-man debian/$(PACKAGE).sgml > $(PACKAGE).1
+
+	touch build-stamp
+
+clean: clean-source
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp patch-stamp
+
+	# Add here commands to clean up after the build process.
+	#-$(MAKE) clean
+	#rm -rf $(STAMP_DIR) $(SOURCE_DIR) objdir
+	rm -rf objdir
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/$(PACKAGE).
+	echo install: > objdir/fixincludes/Makefile
+	cd objdir && $(MAKE) install DESTDIR=$(CURDIR)/debian/$(PACKAGE)/
+
+	#rm debian/$(PACKAGE)/usr/share/man/man1/avr-g++.1
+	#ln -s avr-gcc.1.gz debian/$(PACKAGE)/usr/share/man/man1/avr-g++.1.gz
+	ln -s avr-g++.1.gz debian/$(PACKAGE)/usr/share/man/man1/avr-c++.1.gz
+	ln -s avr-gcc.1.gz debian/$(PACKAGE)/usr/share/man/man1/avr-gcc-4.3.0.gz
+	install -m644 debian/avr-gccbug.1 debian/$(PACKAGE)/usr/share/man/man1/avr-gccbug.1
+	gzip -9 debian/$(PACKAGE)/usr/share/man/man1/avr-gccbug.1
+
+	cd debian/$(PACKAGE)/usr/ && \
+	rm -rf bin/gcov bin/gccbug share/man/man1/gcov.1* \
+	lib*/libiberty.a share/info share/man/man7/gfdl.7* \
+	share/man/man7/gpl.7* share/man/man7/fsf-funding.7* \
+	share/locale bin/*c++filt lib/avr \
+	share/man lib/share lib/include
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+#	dh_installdebconf	
+	dh_installdocs -n
+#	dh_installexamples
+#	dh_installmenu
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_installinit
+#	dh_installcron
+	dh_installman
+	dh_installinfo
+	dh_undocumented avr-gccbug.1 avr-gcov.1
+	dh_installchangelogs 
+	dh_link
+	dh_strip -X.so -X.a -X.o
+	for f in `find debian/$(PACKAGE) -name '*.so*'`; do \
+	  avr-strip --remove-section=.comment --remove-section=.note --strip-unneeded $$f; \
+	done
+	for f in `find debian/$(PACKAGE) -name '*.a*'`; do \
+	  avr-strip --strip-debug $$f; \
+	done
+	dh_compress 
+	dh_fixperms
+#	dh_makeshlibs
+	dh_installdeb
+#	dh_perl
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

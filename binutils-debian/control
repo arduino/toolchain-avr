@@ -1,0 +1,18 @@
+Source: binutils-avr
+Section: devel
+Priority: extra
+Maintainer: Hakan Ardo <hakan@debian.org>
+Standards-Version: 3.0.1.1
+Build-Depends: autoconf (>= 2.13), bison, flex, gettext, texinfo, binutils (>= 2.9.5.0.12), gcc (>= 2.95.2), debhelper (>= 5), tar (>= 1.13.18), bzip2, findutils(>=4.2.31)
+
+Package: binutils-avr
+Section: devel
+Architecture: any
+Priority: extra
+Depends: ${shlibs:Depends} 
+Suggests: binutils (>= ${Source-Version})
+Description: Binary utilities supporting Atmel's AVR targets
+ The programs in this package are used to manipulate binary and object
+ files that may have been created for Atmel's AVR architecture.  This package
+ is primarily for AVR developers and cross-compilers and is not needed
+ by normal users or developers.

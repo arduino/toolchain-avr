@@ -1,0 +1,30 @@
+Committed
+Binutils 2.19
+--------------------------------------------------------------------------------
+--- gas/config/tc-avr.c.old	2007-11-12 21:10:06.653875000 -0700
++++ gas/config/tc-avr.c	2007-11-12 21:26:42.778875000 -0700
+@@ -147,6 +147,7 @@ static struct mcu_type_s mcu_types[] =
+   {"atmega128",  AVR_ISA_M128,    bfd_mach_avr5},
+   {"atmega1280", AVR_ISA_M128,    bfd_mach_avr5},
+   {"atmega1281", AVR_ISA_M128,    bfd_mach_avr5},
++  {"atmega1284p",AVR_ISA_M128,    bfd_mach_avr5},
+   {"atmega645",  AVR_ISA_M323,    bfd_mach_avr5},
+   {"atmega649",  AVR_ISA_M323,    bfd_mach_avr5},
+   {"atmega6450", AVR_ISA_M323,    bfd_mach_avr5},
+--- gas/doc/c-avr.texi.old	2007-11-12 21:10:37.138250000 -0700
++++ gas/doc/c-avr.texi	2007-11-12 21:28:45.013250000 -0700
+@@ -57,10 +57,10 @@ atmega164p, atmega165, atmega165p, atmeg
+ atmega169p, atmega32, atmega323, atmega324p, atmega325, atmega325p, 
+ atmega328p, atmega329, atmega329p, atmega3250, atmega3250p, atmega3290, 
+ atmega3290p, atmega406, atmega64, atmega640, atmega644, atmega644p, 
+-atmega128, atmega1280, atmega1281, atmega645, atmega649, atmega6450, 
+-atmega6490, atmega16hva, at90can32, at90can64, at90can128, at90pwm216, 
+-at90pwm316, at90usb82, at90usb162, at90usb646, at90usb647, at90usb1286, 
+-at90usb1287, at94k).
++atmega128, atmega1280, atmega1281, atmega1284p, atmega645, atmega649, 
++atmega6450, atmega6490, atmega16hva, at90can32, at90can64, at90can128, 
++at90pwm216, at90pwm316, at90usb82, at90usb162, at90usb646, at90usb647, 
++at90usb1286, at90usb1287, at94k).
+ 
+ Instruction set avr6 is for the enhanced AVR core with 256K program
+ memory space (MCU types: atmega2560, atmega2561).

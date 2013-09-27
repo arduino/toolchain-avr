@@ -1,0 +1,24 @@
+Committed
+Binutils 2.19
+--------------------------------------------------------------------------------
+--- gas/doc/c-avr.texi.old	2007-10-05 13:09:07.663000000 -0600
++++ gas/doc/c-avr.texi	2007-10-05 13:09:36.350500000 -0600
+@@ -41,7 +41,7 @@ Instruction set avr2 (default) is for th
+ attiny26, at90s2333, at90s2343, at90s4414, at90s4433, at90s4434,
+ at90s8515, at90c8534, at90s8535, at86rf401, attiny13, attiny2313,
+ attiny261, attiny461, attiny861, attiny24, attiny44, attiny84, attiny25,
+-attiny45, attiny85, attiny43u).
++attiny45, attiny85, attiny43u, attiny48).
+ 
+ Instruction set avr3 is for the classic AVR core with up to 128K program
+ memory space (MCU types: atmega103, atmega603, at43usb320, at43usb355,
+--- gas/config/tc-avr.c.old	2007-10-05 13:12:31.959875000 -0600
++++ gas/config/tc-avr.c	2007-10-05 13:13:11.506750000 -0600
+@@ -99,6 +99,7 @@ static struct mcu_type_s mcu_types[] =
+   {"attiny45",   AVR_ISA_TINY2,   bfd_mach_avr2},
+   {"attiny85",   AVR_ISA_TINY2,   bfd_mach_avr2},
+   {"attiny43u",  AVR_ISA_TINY2,   bfd_mach_avr2},
++  {"attiny48",   AVR_ISA_TINY2,   bfd_mach_avr2},
+   {"atmega603",  AVR_ISA_M603,    bfd_mach_avr3}, /* XXX -> m103 */
+   {"atmega103",  AVR_ISA_M103,    bfd_mach_avr3},
+   {"at43usb320", AVR_ISA_M103,    bfd_mach_avr3},

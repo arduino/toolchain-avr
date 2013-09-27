@@ -1,0 +1,341 @@
+binutils-avr (2.20.1-2) unstable; urgency=low
+
+  * Include our own copy of the binutils 2.20.1 source since binutils-
+    source now provides version 2.21 and version 2.20.1 is the latest with
+    upstream avr support (closes: #618657).
+  * Added -Wno-error=unused-but-set-variable and -Wno-error=unused-but-
+    set-parameter flags.
+  * Replaced the patch-set with the patch-set provided by Atmel at
+    http://distribute.atmel.no/tools/opensource/avr-gcc/binutils-2.20.1/
+        30-binutils-2.20.1-avr-size.patch
+        31-binutils-2.20.1-avr-coff.patch
+        32-binutils-2.20.1-new-sections.patch
+        34-binutils-2.20.1-as-dwarf.patch
+        35-binutils-2.20.1-dwarf2-AVRStudio-workaround.patch
+        36-binutils-2.20.1-assembler-options.patch
+        50-binutils-2.20.1-xmega.patch
+        51-binutils-2.20.1-new-devices.patch
+        52-binutils-2.20.1-avrtiny10.patch
+        53-binutils-2.20.1-xmega128a1u-64a1u.patch
+        54-binutils-2.20.1-atxmega16x1-32x1.patch
+        55-binutils-2.20.1-atxmega128b1.patch
+        56-binutils-2.20.1-atxmega256a3bu.patch
+        57-binutils-2.20.1-at90pwm161.patch
+        58-binutils-2.20.1-atmega16hvb-32hvb.patch
+        59-binutils-2.20.1-atmega32_5_50_90_pa.patch
+        60-binutils-2.20.1-bug13789.patch
+        62-binutils-2.20.1-attiny1634.patch
+        64-binutils-2.20.1-atmega48pa.patch
+
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 09 Jul 2011 14:01:29 +0200
+
+binutils-avr (2.20.1-1) unstable; urgency=low
+
+  * New upstream relese
+  * Removed build-depends on dbs (closes: #576048)
+  * Updated the patch-set to use patches from
+    http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/avr-binutils/:
+        patch-avr-size
+        patch-coff-avr
+        patch-newsections
+        patch-as-dwarf
+        patch-as-dwarf-avrstudio
+        patch-xmega
+        patch-newdevices
+	
+
+ -- Hakan Ardo <hakan@debian.org>  Fri, 30 Jul 2010 09:20:02 +0200
+
+binutils-avr (2.20-3) unstable; urgency=low
+
+  * Dale Whitfield <dale@4drealtime.co.za> collected a new set of
+    patches from Eric Weddington (closes: #482356):
+        30-binutils-2.20-avr-size.patch
+        31-binutils-2.20-avr-coff.patch
+        32-binutils-2.20-new-sections.patch
+        34-binutils-2.20-as-dwarf.patch
+        35-binutils-2.20-dwarf2-AVRStudio-workaround.patch
+        50-binutils-2.20-xmega.patch
+        51-binutils-2.20-new-devices.patch
+
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 20 Feb 2010 09:59:17 +0100
+
+binutils-avr (2.20-2) unstable; urgency=low
+
+  * Removed /usr/share/info since these docs are provided in binutils-
+    doc and gnu-standards (closes: #553541, #553700)
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 04 Nov 2009 18:53:17 +0100
+
+binutils-avr (2.20-1) unstable; urgency=low
+
+  * New upstream release (closes: #518742, #362270)
+  * Applied newsections (rev 1.2) and xmega (rev 1.3) patches from 
+    http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/avr-binutils/
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 31 Oct 2009 10:37:05 +0100
+
+binutils-avr (2.19-1) unstable; urgency=low
+
+  * New upstream release (closes: #518742)
+  * Applied 3 of the patches from revision 63 of svn repository
+    https://winavr.svn.sourceforge.net/svnroot/winavr/trunk/patches/binutils/2.19:
+        30-binutils-2.19-avr-size.patch
+        50-binutils-2.19-xmega.patch
+        51-binutils-2.19-xmega2.patch
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 04 Oct 2009 09:52:54 +0200
+
+binutils-avr (2.18-4) unstable; urgency=low
+
+  * Revered to an unpatched 2.18 release
+  * Applied WinAVR-20080610 from patches/binutils/2.18 in cvs server
+    anonymous@winavr.cvs.sourceforge.net:/cvsroot/winavr with tag
+    WinAVR-20080610:
+      00-binutils-2.18-version-WinAVR.patch
+      30-binutils-2.18-avr-size.patch
+      31-binutils-2.18-avr-coff.patch
+      32-binutils-2.18-new-sections.patch
+      33-binutils-2.18-data-origin.patch
+      40-binutils-2.18-bug-5523.patch
+      41-binutils-2.18-objdump-mixed.patch
+      50-0-binutils-2.18-at90pwmx16.patch
+      50-1-binutils-2.18-attiny43u.patch
+      50-2-binutils-2.18-attiny48.patch
+      50-3-binutils-2.18-at90pwm2b3b.patch
+      50-4-binutils-2.18-remove-devices.patch
+      50-5-binutils-2.18-atmega48p-88p-168p-328p.patch
+      50-6-binutils-2.18-attiny88.patch
+      50-7-binutils-2.18-atmega1284p.patch
+      50-9-binutils-2.18-avr35.patch
+      51-binutils-2.18-at86rf401.patch
+      52-binutils-2.18-xmega.patch
+      53-binutils-2.18-atmega32m1.patch
+      54-binutils-2.18-atmega32c1.patch
+      55-binutils-2.18-atmega32u4.patch
+      56-binutils-2.18-attiny167.patch
+      60-binutils-2.18-bug-2626.patch
+      70-binutils-2.18-bug-6016.patch
+  * Moved /usr/avr to /usr/lib/avr
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 02 Jul 2008 10:52:07 +0200
+
+binutils-avr (2.18-3) unstable; urgency=low
+
+  * Upgraded newdevices patch to rev 1.13
+  * Applied newsections patch rev 1.1 from
+    http://www.freebsd.org/cgi/cvsweb.cgi/~checkout~/ports/devel/avr-
+    binutils/files/patch-newsections
+
+ -- Hakan Ardo <hakan@debian.org>  Fri, 08 Feb 2008 09:45:51 +0100
+
+binutils-avr (2.18-2) unstable; urgency=low
+
+  * Filename of source tar-ball nolonger hardcoded (closes: #460362)
+
+ -- Hakan Ardo <hakan@debian.org>  Tue, 05 Feb 2008 20:35:29 +0100
+
+binutils-avr (2.18-1) unstable; urgency=low
+
+  * New upstream release (closes: #454687)
+  * Now uses src from binutils-source (closes: #413215)
+  * Updated newdevices patch to rev 1.12
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 15 Dec 2007 10:45:05 +0100
+
+binutils-avr (2.17-2) unstable; urgency=low
+
+  * Updated newdevices patch to rev 1.11
+
+ -- Hakan Ardo <hakan@debian.org>  Tue, 14 Aug 2007 17:36:23 +0200
+
+binutils-avr (2.17) unstable; urgency=low
+
+  * New upstream release
+  * Applied binutils-patch-newdevices.diff from FreeBSD
+    (http://www.freebsd.org/cgi/cvsweb.cgi/~checkout~/ports/devel/avr-
+    binutils/files/)
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 22 Apr 2007 10:51:18 +0200
+
+binutils-avr (2.16.1-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Hakan Ardo <hakan@debian.org>  Sat,  4 Feb 2006 16:20:51 +0100
+
+binutils-avr (2.15-3) unstable; urgency=low
+
+  * Added patch from Theodore A. Roth that adds support for atmega48,
+    atmega88, atmega168, attiny13, attiny2313 and at90can128.
+  * Added patch from Tom Parker <palfrey@tevp.net> that adds --allow-
+    dollars switch to as which allows dollars in function names
+    (closes: #247346).
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 27 Feb 2005 11:43:00 +0100
+
+binutils-avr (2.15-1) unstable; urgency=low
+
+  * Upstream release
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 11 Aug 2004 20:18:26 +0200
+
+binutils-avr (2.14-1) unstable; urgency=low
+
+  * Upstream upgrade
+  * Readded Build-Depends on toolchain-source (closes: #199023)
+
+ -- Hakan Ardo <hakan@debian.org>  Mon, 29 Mar 2004 14:15:56 +0200
+
+binutils-avr (2.13.90.1.030512) unstable; urgency=low
+
+  * Now contains the src tar ball
+  * Uses packaged dbs
+  * Updated to 030512 snapshot
+  * No longer Build-Depends on toolchain-source (closes: #187683)
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 25 Jun 2003 20:58:07 +0200
+
+binutils-avr (2.13.90.0.18-2) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.2-7
+
+ -- Hakan Ardo <hakan@debian.org>  Tue, 11 Mar 2003 15:50:57 +0100
+
+binutils-avr (2.13.90.0.18-1) unstable; urgency=low
+
+  * New upstream release (2.13.90.0.18)
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 26 Feb 2003 12:23:09 +0100
+
+binutils-avr (2.13.90.0.10-1) unstable; urgency=low
+
+  * New upstream release (2.13.90.0.10)
+  * Added patching support
+
+ -- Hakan Ardo <hakan@debian.org>  Thu,  7 Nov 2002 22:42:16 +0100
+
+binutils-avr (2.13.90.0.4-1) unstable; urgency=low
+
+  * New upstream release (2.13.90.0.4)
+  * Relaxed dependency on native pkg and added README.debian describing
+    the case
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 16 Oct 2002 13:36:55 +0200
+
+binutils-avr (2.13-1) unstable; urgency=low
+
+  * New upstream release (2.13)
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 18 Aug 2002 16:01:53 +0200
+
+binutils-avr (2.12.90.0.7-4) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.1.1-1
+
+ -- Hakan Ardo <hakan@debian.org>  Fri,  2 Aug 2002 16:06:26 +0200
+
+binutils-avr (2.12.90.0.7-3) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.1-3
+
+ -- Hakan Ardo <hakan@debian.org>  Wed, 10 Jul 2002 13:28:07 +0200
+
+binutils-avr (2.12.90.0.7-2) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.1-2
+
+ -- Hakan Ardo <hakan@debian.org>  Sat,  6 Jul 2002 00:12:28 +0200
+
+binutils-avr (2.12.90.0.7-1) unstable; urgency=low
+
+  * New upstream release (2.12.90.0.7)
+
+ -- Hakan Ardo <hakan@debian.org>  Fri, 31 May 2002 13:44:36 +0200
+
+binutils-avr (2.12.90.0.1-4) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.0.4-5
+
+ -- Hakan Ardo <hakan@debian.org>  Thu,  2 May 2002 15:46:41 +0200
+
+binutils-avr (2.12.90.0.1-3) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.0.4-4
+
+ -- Hakan Ardo <hakan@debian.org>  Mon,  8 Apr 2002 11:24:53 +0200
+
+binutils-avr (2.12.90.0.1-2) unstable; urgency=low
+
+  * /usr/include/dis-asm.h removed from cross packages
+  * Recompiled with toolchain-source 3.0.4-3
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 30 Mar 2002 12:16:20 +0100
+
+binutils-avr (2.12.90.0.1-1) unstable; urgency=low
+
+  * New upstream release (2.12.90.0.1)
+
+ -- Hakan Ardo <hakan@debian.org>  Sat, 30 Mar 2002 11:31:19 +0100
+
+binutils-avr (2.11.92.0.12.3-4) unstable; urgency=low
+
+  * Recompiled with toolchain-source 3.0.4-1
+
+ -- Hakan Ardo <hakan@debian.org>  Mon, 11 Mar 2002 15:27:18 +0100
+
+binutils-avr (2.11.92.0.12.3-3) unstable; urgency=low
+
+  * Added Build-Depends: bzip2 (closes: #129652)
+  * Renamed avr-linux to avr as we dont run linux on target
+  * Recompiled with toolchain-source 3.0.3-3
+
+ -- Hakan Ardo <hakan@debian.org>  Sat,  9 Feb 2002 15:42:19 +0100
+
+binutils-avr (2.11.92.0.12.3-2) unstable; urgency=low
+
+  * Now uses tar tjf (Bug #128550)
+  * No longer includes conflicting files with binutils, but depends on
+    it (Bug #128550)
+  * Recompiled with toolchain-source 3.0.3-2
+
+ -- Hakan Ardo <hakan@debian.org>  Thu, 10 Jan 2002 23:34:54 +0100
+
+binutils-avr (2.11.92.0.12.3-1) unstable; urgency=low
+
+  * Updated to upstream version 2.11.92.0.12.3
+  * Binutils version numer nolonger hardcoded in rules
+
+ -- Hakan Ardo <hakan@debian.org>  Mon,  7 Jan 2002 15:12:33 +0100
+
+binutils-avr (2.11.90.0.7-5) unstable; urgency=low
+
+  * Changed Amtel into Atmel (Bug #114521)
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 11 Nov 2001 12:48:06 +0100
+
+binutils-avr (2.11.90.0.7-4) unstable; urgency=low
+
+  * Updated build-depend on toolchain-source (Bug  #109205)
+
+ -- Hakan Ardo <hakan@debian.org>  Sun, 19 Aug 2001 22:15:51 +0200
+
+binutils-avr (2.11.90.0.7-3) unstable; urgency=low
+
+  * No longer uses apt-get but build-depends on toolchain-source (Bug
+    #106148)
+
+ -- Hakan Ardo <hakan@debian.org>  Thu, 26 Jul 2001 11:13:44 +0200
+
+binutils-avr (2.11.90.0.7-2) unstable; urgency=low
+
+  * Initial Release as a source pakcage of it's own. Previos 
+    releases was as part of the binutils package.
+
+ -- Hakan Ardo <hakan@debian.org>  Mon,  9 Jul 2001 22:21:33 +0200
+
+Local variables:
+mode: debian-changelog
+End:

@@ -1,0 +1,22 @@
+WinAVR specific only
+Need configure options like GCC.
+--------------------------------------------------------------------------------
+diff -Nur ../binutils-2.18.orig/bfd/Makefile.am ./bfd/Makefile.am
+--- bfd/Makefile.in	Tue Oct 23 21:44:07 2007
++++ bfd/Makefile.in	Tue Oct 23 22:41:01 2007
+@@ -976,13 +980,13 @@
+ bfdver.h: $(srcdir)/version.h $(srcdir)/Makefile.in
+ 	@echo "creating $@"
+ 	@bfd_version=`echo "$(VERSION)" | sed -e 's/\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\).*/\1.00\2.00\3.00\4.00\5/' -e 's/\([^\.]*\)\..*\(..\)\..*\(..\)\..*\(..\)\..*\(..\)$$/\1\2\3\4\5/'` ;\
+-	bfd_version_string="\"$(VERSION)\"" ;\
++	bfd_version_string="\"$(VERSION) (WinAVR 20080610)\"" ;\
+ 	bfd_soversion="$(VERSION)" ;\
+ 	bfd_version_package="\"$(PKGVERSION)\"" ;\
+ 	report_bugs_to="\"$(REPORT_BUGS_TO)\"" ;\
+ 	if test "x$(RELEASE)" = x ; then \
+ 	  bfd_version_date=`sed -n -e 's/.*DATE //p' < $(srcdir)/version.h` ;\
+-	  bfd_version_string="\"$(VERSION).$${bfd_version_date}\"" ;\
++	  bfd_version_string="\"$(VERSION).$${bfd_version_date} (WinAVR 20080610)\"" ;\
+ 	  bfd_soversion="$(VERSION).$${bfd_version_date}" ;\
+ 	fi ;\
+ 	sed -e "s,@bfd_version@,$$bfd_version," \

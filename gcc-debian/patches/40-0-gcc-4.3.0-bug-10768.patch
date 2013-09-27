@@ -1,0 +1,46 @@
+This patch is only a workaround for 
+http://sourceforge.net/tracker/index.php?func=detail&aid=694573&group_id=74228&atid=540316
+(gcc-PR10768).
+
+Tested with no test suite regressions on gcc-4_1 (i686)
+
+Index: gcc-4_1-branch/gcc/ada/uintp.ads
+===================================================================
+--- gcc/ada/uintp.ads
++++ gcc/ada/uintp.ads
+@@ -407,7 +407,7 @@
+    --  so that a directly represented number always fits in two digits when
+    --  represented in base format.
+ 
+-   Min_Direct : constant Int := -(Base - 1);
++   Min_Direct : constant Int := -(Base);
+    Max_Direct : constant Int := (Base - 1) * (Base - 1);
+ 
+    --  The following values define the bias used to store Uint values which
+@@ -418,7 +418,8 @@
+ 
+    type Ctrl is range Int'First .. Int'Last;
+ 
+-   Uint_Direct_Bias  : constant Ctrl := Ctrl (Uint_Low_Bound) + Ctrl (Base);
++   Uint_Direct_Bias  : constant Ctrl := Ctrl (Uint_Low_Bound) + Ctrl (Base)
++     + 1;
+    Uint_Direct_First : constant Ctrl := Uint_Direct_Bias + Ctrl (Min_Direct);
+    Uint_Direct_Last  : constant Ctrl := Uint_Direct_Bias + Ctrl (Max_Direct);
+ 
+Index: gcc-4_1-branch/gcc/ada/types.h
+===================================================================
+--- gcc/ada/types.h
++++ gcc/ada/types.h
+@@ -253,10 +253,10 @@
+ #define Base 32768
+ 
+ /* Minimum and maximum integers directly representable as Uint values */
+-#define Min_Direct (-(Base - 1))
++#define Min_Direct (-(Base))
+ #define Max_Direct ((Base - 1) * (Base - 1))
+ 
+-#define Uint_Direct_Bias  (Uint_Low_Bound + Base)
++#define Uint_Direct_Bias  (Uint_Low_Bound + Base + 1)
+ #define Uint_Direct_First (Uint_Direct_Bias + Min_Direct)
+ #define Uint_Direct_Last  (Uint_Direct_Bias + Max_Direct)
+ 

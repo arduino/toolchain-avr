@@ -1,0 +1,87 @@
+--- gcc/ada/xgnatugn.adb~	Mon Aug  9 12:24:22 2004
++++ gcc/ada/xgnatugn.adb	Mon Apr 11 12:28:27 2005
+@@ -98,6 +98,7 @@
+ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
+ with Ada.Strings.Maps;           use Ada.Strings.Maps;
+ with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
++with Ada.Streams.Stream_IO;      use Ada.Streams.Stream_IO;
+ with Ada.Text_IO;                use Ada.Text_IO;
+ 
+ with GNAT.Spitbol;               use GNAT.Spitbol;
+@@ -109,12 +110,14 @@
+    --  Print usage information. Invoked if an invalid command line is
+    --  encountered.
+ 
+-   Output_File : File_Type;
++   subtype Sfile is Ada.Streams.Stream_IO.File_Type;
++
++   Output_File : Sfile;
+    --  The preprocessed output is written to this file
+ 
+    type Input_File is record
+       Name : VString;
+-      Data : File_Type;
++      Data : Ada.Text_IO.File_Type;
+       Line : Natural := 0;
+    end record;
+    --  Records information on an input file. Name and Line are used
+@@ -124,6 +127,10 @@
+    --  Returns a line from Input and performs the necessary
+    --  line-oriented checks (length, character set, trailing spaces).
+ 
++   procedure Put_Line (F : Sfile; S : String);
++   procedure Put_Line (F : Sfile; S : VString);
++   --  Local version of Put_Line ensures Unix style line endings
++
+    Number_Of_Warnings : Natural := 0;
+    Number_Of_Errors   : Natural := 0;
+    Warnings_Enabled   : Boolean;
+@@ -353,6 +360,21 @@
+       end;
+    end Get_Line;
+ 
++   --------------
++   -- Put_Line --
++   --------------
++
++   procedure Put_Line (F : Sfile; S : String) is
++   begin
++      String'Write (Stream (F), S);
++      Character'Write (Stream (F), ASCII.LF);
++   end Put_Line;
++
++   procedure Put_Line (F : Sfile; S : VString) is
++   begin
++      Put_Line (F, To_String (S));
++   end Put_Line;
++
+    -----------
+    -- Error --
+    -----------
+@@ -1312,7 +1334,7 @@
+          Open (Source_File.Data, In_File, Argument (2));
+ 
+       exception
+-         when Name_Error =>
++         when Ada.Text_IO.Name_Error =>
+             Valid_Command_Line := False;
+       end;
+    end if;
+@@ -1325,7 +1347,7 @@
+          Open (Dictionary_File.Data, In_File, Argument (3));
+ 
+       exception
+-         when Name_Error =>
++         when Ada.Text_IO.Name_Error =>
+             Valid_Command_Line := False;
+       end;
+    end if;
+@@ -1350,7 +1372,7 @@
+          Create (Output_File, Out_File, S (Output_File_Name));
+ 
+       exception
+-         when Name_Error | Use_Error =>
++         when Ada.Text_IO.Name_Error | Ada.Text_IO.Use_Error =>
+             Valid_Command_Line := False;
+       end;
+    end if;

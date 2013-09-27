@@ -1,0 +1,83 @@
+Committed
+Binutils 2.19
+--------------------------------------------------------------------------------
+Index: gas/config/tc-avr.c
+===================================================================
+RCS file: /cvs/src/src/gas/config/tc-avr.c,v
+retrieving revision 1.48
+diff -u -p -r1.48 tc-avr.c
+--- gas/config/tc-avr.c	16 Nov 2007 17:39:22 -0000	1.48
++++ gas/config/tc-avr.c	3 Jan 2008 20:56:39 -0000
+@@ -63,7 +63,7 @@ static struct mcu_type_s mcu_types[] =
+ {
+   {"avr1",       AVR_ISA_TINY1,   bfd_mach_avr1},
+   {"avr2",       AVR_ISA_TINY2,   bfd_mach_avr2},
+-  {"avr3",       AVR_ISA_M103,    bfd_mach_avr3},
++  {"avr3",       AVR_ISA_AVR3,    bfd_mach_avr3},
+   {"avr4",       AVR_ISA_M8,      bfd_mach_avr4},
+   {"avr5",       AVR_ISA_ALL,     bfd_mach_avr5},
+   {"avr6",       AVR_ISA_ALL,     bfd_mach_avr6},
+@@ -103,6 +103,8 @@ static struct mcu_type_s mcu_types[] =
+   {"at43usb320", AVR_ISA_M103,    bfd_mach_avr3},
+   {"at43usb355", AVR_ISA_M603,    bfd_mach_avr3},
+   {"at76c711",   AVR_ISA_M603,    bfd_mach_avr3},
++  {"at90usb82",  AVR_ISA_USB162,  bfd_mach_avr3},
++  {"at90usb162", AVR_ISA_USB162,  bfd_mach_avr3},
+   {"atmega48",   AVR_ISA_PWMx,    bfd_mach_avr4},
+   {"atmega48p",  AVR_ISA_PWMx,    bfd_mach_avr4},
+   {"atmega8",    AVR_ISA_M8,      bfd_mach_avr4},
+@@ -159,8 +161,6 @@ static struct mcu_type_s mcu_types[] =
+   {"at90can128", AVR_ISA_M128,    bfd_mach_avr5},
+   {"at90pwm216", AVR_ISA_M323,    bfd_mach_avr5},
+   {"at90pwm316", AVR_ISA_M323,    bfd_mach_avr5},
+-  {"at90usb82",  AVR_ISA_M323,    bfd_mach_avr5},
+-  {"at90usb162", AVR_ISA_M323,    bfd_mach_avr5},
+   {"at90usb646", AVR_ISA_M323,    bfd_mach_avr5},
+   {"at90usb647", AVR_ISA_M323,    bfd_mach_avr5},
+   {"at90usb1286",AVR_ISA_M128,    bfd_mach_avr5},
+Index: gas/doc/c-avr.texi
+===================================================================
+RCS file: /cvs/src/src/gas/doc/c-avr.texi,v
+retrieving revision 1.12
+diff -u -p -r1.12 c-avr.texi
+--- gas/doc/c-avr.texi	16 Nov 2007 17:39:22 -0000	1.12
++++ gas/doc/c-avr.texi	3 Jan 2008 20:56:39 -0000
+@@ -44,7 +44,8 @@ attiny261, attiny461, attiny861, attiny2
+ attiny45, attiny85, attiny43u, attiny48, attiny88).
+ 
+ Instruction set avr3 is for the classic AVR core with up to 128K program
+-memory space (MCU types: atmega103, at43usb320, at43usb355, at76c711).
++memory space (MCU types: atmega103, at43usb320, at43usb355, at76c711, 
++at90usb82, at90usb162).
+ 
+ Instruction set avr4 is for the enhanced AVR core with up to 8K program
+ memory space (MCU types: atmega48, atmega48p,atmega8, atmega88, atmega88p,
+@@ -59,8 +60,8 @@ atmega328p, atmega329, atmega329p, atmeg
+ atmega3290p, atmega32hvb, atmega406, atmega64, atmega640, atmega644, atmega644p, 
+ atmega128, atmega1280, atmega1281, atmega1284p, atmega645, atmega649, 
+ atmega6450, atmega6490, atmega16hva, at90can32, at90can64, at90can128, 
+-at90pwm216, at90pwm316, at90usb82, at90usb162, at90usb646, at90usb647, 
+-at90usb1286, at90usb1287, at94k).
++at90pwm216, at90pwm316, at90usb646, at90usb647, at90usb1286, at90usb1287,
++at94k).
+ 
+ Instruction set avr6 is for the enhanced AVR core with 256K program
+ memory space (MCU types: atmega2560, atmega2561).
+Index: include/opcode/avr.h
+===================================================================
+RCS file: /cvs/src/src/include/opcode/avr.h,v
+retrieving revision 1.9
+diff -u -p -r1.9 avr.h
+--- include/opcode/avr.h	7 Apr 2006 15:18:08 -0000	1.9
++++ include/opcode/avr.h	3 Jan 2008 20:56:40 -0000
+@@ -40,6 +40,10 @@
+                        AVR_ISA_LPMX | AVR_ISA_SPM)
+ #define AVR_ISA_M603  (AVR_ISA_2xxx | AVR_ISA_MEGA)
+ #define AVR_ISA_M103  (AVR_ISA_M603 | AVR_ISA_ELPM)
++#define AVR_ISA_USB162 (AVR_ISA_M603 | AVR_ISA_MOVW | \
++                       AVR_ISA_LPMX | AVR_ISA_SPM)
++#define AVR_ISA_AVR3 (AVR_ISA_M603 | AVR_ISA_MOVW | \
++                       AVR_ISA_LPMX | AVR_ISA_SPM  | AVR_ISA_ELPM)
+ #define AVR_ISA_M161  (AVR_ISA_M603 | AVR_ISA_MUL | AVR_ISA_MOVW | \
+                        AVR_ISA_LPMX | AVR_ISA_SPM)
+ #define AVR_ISA_94K   (AVR_ISA_M603 | AVR_ISA_MUL | AVR_ISA_MOVW | AVR_ISA_LPMX)

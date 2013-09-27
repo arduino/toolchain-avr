@@ -1,0 +1,179 @@
+.\" gasp man page by Christopher C. Chimelis, chris@debian.org
+.\" for binutils 2.9.5.0.12  17 Sep 1999
+.TH gasp 1 "September 1999" Debian "GNU Development Tools"
+.SH NAME
+gasp \- a preprocessor for assembly programs
+.SH SYNOPSIS
+.hy 0
+.na
+.TP
+.B gasp
+.RB "[\|" \-a | \-\-alternate "\|]"
+.RB "[\|" "\-c\ "\c
+.I CHAR\c
+.RB " | " "\-\-commentchar\ "\c
+.I CHAR\c
+\&\|]
+.RB "[\|" \-d | \-\-debug "\|]"
+.RB "[\|" \-h | \-\-help "\|]"
+.RB "[\|" \-M | \-\-mri "\|]"
+.RB "[\|" "\-o\ "\c
+.I OUTFILE\c
+.RB " | " "\-\-output\ "\c
+.I OUTFILE\c
+\&\|]
+.RB "[\|" \-p | \-\-print "\|]"
+.RB "[\|" \-s | \-\-copysource "\|]"
+.RB "[\|" \-u | \-\-unreasonable "\|]"
+.RB "[\|" \-v | \-\-version "\|]"
+.I INFILE \c
+\&.\|.\.
+.ad b
+.hy 1
+.SH DESCRIPTION
+\c
+The primary purpose of the GNU assembler is to assemble the output of
+other programs--notably compilers.  When you have to hand-code
+specialized routines in assembly, that means the GNU assembler is an
+unfriendly processor: it has no directives for macros, conditionals, or
+many other conveniences that you might expect.
+
+In some cases you can simply use the C preprocessor, or a generalized
+preprocessor like M4; but this can be awkward, since none of these
+things are designed with assembly in mind.
+
+.B gasp \c
+fills this need.  It is expressly designed to provide the
+facilities you need with hand-coded assembly code.  Implementing it as a
+preprocessor, rather than part of the assembler, allows the maximum
+flexibility: you can use it with hand-coded assembly, without paying a
+penalty of added complexity in the assembler you use for compiler
+output.
+.PP
+.IR  "INFILE" .\|.\|.
+are the files to be preprocessed.
+
+.SH OPTIONS
+The simplest way to use GASP is to run it as a filter and assemble
+its output.  In Unix and its ilk, you can do this, for example:
+
+     $ gasp prog.asm | as -o prog.o
+
+Naturally, there are also a few command-line options to allow you to
+request variations on this basic theme.  Here is the full set of
+possibilities for the GASP command line.
+
+.TP
+.B \-a
+.TP
+.B \-\-alternate
+Use alternative macro syntax.  *Note Alternate macro syntax:
+Alternate, for a discussion of how this syntax differs from the
+default GASP syntax.
+
+.TP
+.BI "\-c " CHAR
+.TP
+.BI "\-\-commentchar " CHAR
+Use CHAR as the comment character.  The default comment character
+is `!'.  For example, to use a semicolon as the comment character,
+specify `-c ';'' on the GASP command line.  Since assembler
+command characters often have special significance to command
+shells, it is a good idea to quote or escape CHAR when you specify
+a comment character.
+
+For the sake of simplicity, all examples in this manual use the
+default comment character `!'.
+
+.TP
+.B \-d
+.TP
+.B \-\-debug
+Show debugging statistics.  In this version of GASP, this option
+produces statistics about the string buffers that GASP allocates
+internally.  For each defined buffersize S, GASP shows the number
+of strings N that it allocated, with a line like this:
+
+     strings size S : N
+
+GASP displays these statistics on the standard error stream, when
+done preprocessing.
+
+.TP
+.B \-h
+.TP
+.B \-\-help
+Display a summary of the GASP command line options.
+
+.TP
+.B \-M
+.TP
+.B \-\-mri
+Use MRI compatibility mode.  Using this option causes GASP to
+accept the syntax and pseudo-ops used by the Microtec Research
+`ASM68K' assembler.
+
+.TP
+.BI "\-o " OUTFILE
+.TP
+.BI "\-\-output " OUTFILE
+`-o OUTFILE'
+`--output OUTFILE'
+Write the output in a file called OUTFILE.  If you do not use the
+`-o' option, GASP writes its output on the standard output stream.
+
+.TP
+.B \-p
+.TP
+.B \-\-print
+Print line numbers.  GASP obeys this option _only_ if you also
+specify `-s' to copy source lines to its output.  With `-s -p',
+GASP displays the line number of each source line copied
+(immediately after the comment character at the beginning of the
+line).
+
+.TP
+.B \-s
+.TP
+.B \-\-copysource
+Copy the source lines to the output file.  Use this option to see
+the effect of each preprocessor line on the GASP output.  GASP
+places a comment character (`!' by default) at the beginning of
+each source line it copies, so that you can use this option and
+still assemble the result.
+
+.TP
+.B \-u
+.TP
+.B \-\-unreasonable
+Bypass "unreasonable expansion" limit.  Since you can define GASP
+macros inside other macro definitions, the preprocessor normally
+includes a sanity check.  If your program requires more than 1,000
+nested expansions, GASP normally exits with an error message.  Use
+this option to turn off this check, allowing unlimited nested
+expansions.
+
+.TP
+.B \-v
+.TP
+.B \-\-version
+Display the GASP version number.
+
+.TP
+.IB INFILE \ .\.\.
+The input file names.  You must specify at least one input file;
+if you specify more, GASP preprocesses them all, concatenating the
+output in the order you list the INFILE arguments.
+
+Mark the end of each input file with the preprocessor command
+`.END'.
+
+.SH SEE ALSO
+.RB "`\|" gasp "\|'"
+entry in
+.B info\c
+\&;
+.I
+The GNU Binary Utilities\c
+\&, Roland H. Pesch (October 1991);
+.BR gasp "(" 1 ")."

@@ -1,0 +1,67 @@
+Committed, Bug fixed
+Binutils 2.19
+
+This patch must come after 51-binutils-2.18-at86rf401.patch, which has 
+already been committed to binutils CVS.
+--------------------------------------------------------------------------------
+===================================================================
+RCS file: /cvs/include/opcode/avr.h,v
+retrieving revision 1.11
+retrieving revision 1.12
+diff -u -r1.11 -r1.12
+--- include/opcode/avr.h	2008/01/23 17:36:23	1.11
++++ include/opcode/avr.h	2008/02/14 13:04:29	1.12
+@@ -1,6 +1,6 @@
+ /* Opcode table for the Atmel AVR micro controllers.
+ 
+-   Copyright 2000, 2001, 2004, 2006 Free Software Foundation, Inc.
++   Copyright 2000, 2001, 2004, 2006, 2008 Free Software Foundation, Inc.
+    Contributed by Denis Chertykov <denisc@overta.ru>
+    
+    This program is free software; you can redistribute it and/or modify
+@@ -34,6 +34,8 @@
+ #define AVR_ISA_TINY1 (AVR_ISA_1200 | AVR_ISA_LPM)
+ #define AVR_ISA_PWMx  (AVR_ISA_M8   | AVR_ISA_BRK)
+ #define AVR_ISA_2xxx  (AVR_ISA_TINY1 | AVR_ISA_SRAM)
++/* For the attiny26 which is missing LPM Rd,Z+.  */
++#define AVR_ISA_2xxe  (AVR_ISA_2xxx | AVR_ISA_LPMX)
+ #define AVR_ISA_RF401 (AVR_ISA_2xxx | AVR_ISA_MOVW | AVR_ISA_LPMX)
+ #define AVR_ISA_TINY2 (AVR_ISA_2xxx | AVR_ISA_MOVW | AVR_ISA_LPMX | \
+                        AVR_ISA_SPM  | AVR_ISA_BRK)
+===================================================================
+RCS file: /cvs/gas/config/tc-avr.c,v
+retrieving revision 1.50
+retrieving revision 1.51
+diff -u -r1.50 -r1.51
+--- gas/config/tc-avr.c	2008/01/23 17:36:23	1.50
++++ gas/config/tc-avr.c	2008/02/14 13:04:29	1.51
+@@ -1,6 +1,6 @@
+ /* tc-avr.c -- Assembler code for the ATMEL AVR
+ 
+-   Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007
++   Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008
+    Free Software Foundation, Inc.
+    Contributed by Denis Chertykov <denisc@overta.ru>
+ 
+@@ -77,7 +77,7 @@
+   {"at90s2333",  AVR_ISA_2xxx,    bfd_mach_avr2}, /* XXX -> 4433 */
+   {"at90s2343",  AVR_ISA_2xxx,    bfd_mach_avr2},
+   {"attiny22",   AVR_ISA_2xxx,    bfd_mach_avr2}, /* XXX -> 2343 */
+-  {"attiny26",   AVR_ISA_2xxx,    bfd_mach_avr2},
++  {"attiny26",   AVR_ISA_2xxe,    bfd_mach_avr2},
+   {"at90s4433",  AVR_ISA_2xxx,    bfd_mach_avr2},
+   {"at90s4414",  AVR_ISA_2xxx,    bfd_mach_avr2}, /* XXX -> 8515 */
+   {"at90s4434",  AVR_ISA_2xxx,    bfd_mach_avr2}, /* XXX -> 8535 */
+@@ -765,6 +765,12 @@
+ 	  ++str;
+ 	  op_mask |= 1;
+ 	}
++
++      /* attiny26 can do "lpm" and "lpm r,Z" but not "lpm r,Z+".  */
++      if (!avr_opt.all_opcodes
++	  && (op_mask & 0x0001)
++	  && !(avr_mcu->isa & AVR_ISA_MOVW))
++	as_bad (_("postincrement not supported"));
+       break;
+ 
+     case 'b':

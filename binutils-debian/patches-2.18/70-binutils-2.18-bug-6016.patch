@@ -1,0 +1,24 @@
+Index: bfd/elf32-avr.c
+===================================================================
+RCS file: /cvs/src/src/bfd/elf32-avr.c,v
+retrieving revision 1.34
+diff -c -3 -p -r1.34 elf32-avr.c
+*** bfd/elf32-avr.c	12 Mar 2008 08:36:58 -0000	1.34
+--- bfd/elf32-avr.c	30 May 2008 15:36:27 -0000
+*************** elf32_avr_relax_section (bfd *abfd,
+*** 2034,2040 ****
+                          /* Check for local symbols.  */
+                          isym = (Elf_Internal_Sym *) symtab_hdr->contents;
+                          isymend = isym + symtab_hdr->sh_info;
+!                         for (; isym < isymend; isym++)
+                           {
+                             if (isym->st_value == section_offset_of_ret_insn
+                                 && isym->st_shndx == sec_shndx)
+--- 2034,2040 ----
+                          /* Check for local symbols.  */
+                          isym = (Elf_Internal_Sym *) symtab_hdr->contents;
+                          isymend = isym + symtab_hdr->sh_info;
+!                         for (; isym != NULL && isym < isymend; isym++)
+                           {
+                             if (isym->st_value == section_offset_of_ret_insn
+                                 && isym->st_shndx == sec_shndx)

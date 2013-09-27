@@ -1,0 +1,22 @@
+;; Object debian/
+;; SEMANTICDB Tags save file
+(semanticdb-project-database-file "debian/"
+  :tables (list 
+   (semanticdb-table "rules"
+    :major-mode 'makefile-mode
+    :tags '(("PACKAGE" variable (:default-value ("binutils-avr")) nil [107 128]) ("TARGET" variable (:default-value ("avr")) nil [128 139]) ("/usr/share/dbs/dpkg-arch.mk" include nil nil [172 208]) ("CONFARGS" variable (:default-value ("--prefix=/usr" "--build=$(DEB_BUILD_GNU_TYPE)" "--host=$(DEB_HOST_GNU_TYPE)" "--target=$(TARGET)" "--disable-static" "--with-gnu-ld" "--with-gnu-as" "--enable-install-libbfd" "--with-dwarf2")) nil [215 499]) ("DH_COMPAT" variable (:default-value ("5")) nil [626 638]) ("TAR_DIR" variable (:default-value ("binutils-*")) nil [639 658]) ("debian/dbs-build.mk" include nil nil [695 723]) ("binutils-2.18.tar.bz2" function nil nil [941 1032]) ("configure" function (:arguments ("configure-stamp")) nil [1032 1074]) ("configure-stamp" function (:arguments ("binutils-2.18.tar.bz2" "$(patched)")) nil [1059 1122]) ("build" function (:arguments ("configure-stamp" "build-stamp")) nil [1251 1297]) ("build-stamp" function (:arguments ("binutils-2.18.tar.bz2" "$(patched)")) nil [1286 1345]) ("clean" function nil nil [1504 1578]) ("install" function (:arguments ("build")) nil [1723 1793]) ("binary-indep" function (:arguments ("build" "install")) nil [2346 2410]) ("binary-arch" function (:arguments ("build" "install")) nil [2454 2527]) ("binary" function (:arguments ("binary-indep" "binary-arch")) nil [3315 3354]))
+    :file "rules"
+    :pointmax 3418
+    :unmatched-syntax 'nil
+    )
+   (semanticdb-table "dbs-build.mk"
+    :major-mode 'makefile-mode
+    :tags '(("SOURCE_DIR" variable (:default-value ("build-tree")) nil [216 240]) ("STAMP_DIR" variable (:default-value ("stampdir")) nil [240 261]) ("debian/vars" include nil nil [453 473]) ("debian_vars" variable (:default-value ("debian/vars")) nil [475 501]) ("debian_vars" variable nil nil [510 524]) ("SHELL" variable (:default-value ("/bin/bash" "-e")) nil [533 555]) ("DBS_SCRIPT_DIR" variable (:default-value ("/usr/share/dbs")) nil [555 587]) ("DBS_SPLIT" variable (:default-value ("$(DBS_SCRIPT_DIR)/dbs_split")) nil [587 627]) ("DBS_FILE2CAT" variable (:default-value ("$(DBS_SCRIPT_DIR)/internal/file2cat")) nil [627 678]) ("DBS_LIB" variable (:default-value ("$(DBS_SCRIPT_DIR)/internal/lib")) nil [678 720]) ("DBS_VARSBUILD" variable (:default-value ("$(DBS_SCRIPT_DIR)/internal/vars.build")) nil [720 774]) ("patched" variable (:default-value ("$(STAMP_DIR)/patchapply")) nil [796 831]) ("unpacked" variable (:default-value ("$(STAMP_DIR)/source.unpack")) nil [831 869]) ("created" variable (:default-value ("$(STAMP_DIR)/source.created")) nil [869 908]) ("sh_vars" variable (:default-value ("$(STAMP_DIR)/vars.sh")) nil [908 940]) ("DBS_LIB" variable (:default-value ("\"SOURCE_DIR=\\\"$(SOURCE_DIR)\\\"\"")) nil [940 983]) ("DBS_LIB" variable (:default-value ("\"STAMP_DIR=\\\"$(STAMP_DIR)\\\"\"")) nil [983 1024]) ("DBS_LIB" variable (:default-value ("\"VARS_FILE=\\\"$(sh_vars)\\\"\"")) nil [1024 1063]) ("DBS_LIB" variable (:default-value ("\"STRIP_LEVEL=1\"")) nil [1063 1091]) ("BUILD_TREE" variable (:default-value ("$(SOURCE_DIR)/$(TAR_DIR)")) nil [1108 1146]) ("DBS_LIB" variable (:default-value ("\"TAR_DIR=\\\"$(TAR_DIR)\\\"\"")) nil [1148 1184]) ("BUILD_TREE" variable (:default-value ("$(SOURCE_DIR)")) nil [1191 1218]) ("SCRIPT_DIR" variable (:default-value ("$(DBS_SCRIPT_DIR)/internal/")) nil [1295 1336]) ("$(STAMP_DIR)" function (:arguments ("$(created)")) nil [1336 1386]) ("dh_mak_deps" variable (:default-value ("$(shell DH_COMPAT=$(DH_COMPAT) perl $(DBS_SPLIT) makedeps)")) nil [1389 1462]) ("dh_gen_deps" variable (:default-value ("$(shell DH_COMPAT=$(DH_COMPAT) perl $(DBS_SPLIT) gendeps)")) nil [1462 1534]) ("$(dh_mak_deps)" function (:arguments ("$(dh_gen_deps)")) nil [1535 1586]) ("setup" function (:arguments ("$(dh_mak_deps)")) nil [1587 1684]) ("$(patched)" function (:arguments ("$(created)" "$(sh_vars)" "$(unpacked)")) nil [1684 1777]) ("unpacked" function (:arguments ("$(unpacked)")) nil [1777 1800]) ("$(unpacked)" function (:arguments ("$(created)" "$(sh_vars)")) nil [1799 1882]) ("make_patch" function nil nil [1882 2217]) ("$(created)" function nil nil [2217 2287]) ("$(sh_vars)" function (:arguments ("$(debian_vars)" "$(created)")) nil [2287 2330]))
+    :file "dbs-build.mk"
+    :pointmax 2425
+    )
+   )
+  :file "semantic.cache"
+  :semantic-tag-version "2.0pre3"
+  :semanticdb-version "2.0pre3"
+  )

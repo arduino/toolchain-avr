@@ -1,0 +1,41 @@
+\input texinfo  @c -*-texinfo-*-
+@c %**start of header
+
+@settitle The GNU Compiler Collection (GCC)
+
+@c Create a separate index for command line options.
+@defcodeindex op
+@c Merge the standard indexes into a single one.
+@syncodeindex fn cp
+@syncodeindex vr cp
+@syncodeindex ky cp
+@syncodeindex pg cp
+@syncodeindex tp cp
+
+@paragraphindent 1
+
+@c %**end of header
+
+@copying
+The current documentation is licensed under the same terms as the Debian packaging.
+@end copying
+@ifnottex
+@dircategory Programming
+@direntry
+* @name@: (@name@).                  The GNU Compiler Collection (@name@).
+@end direntry
+@sp 1
+@end ifnottex
+
+@summarycontents
+@contents
+@page
+
+@node Top
+@top Introduction
+@cindex introduction
+The official GNU compilers' documentation is released under the terms
+of the GNU Free Documentation License with cover texts. This has been
+considered non free by the Debian Project. Thus you will find it in the
+non-free section of the Debian archive.
+@bye

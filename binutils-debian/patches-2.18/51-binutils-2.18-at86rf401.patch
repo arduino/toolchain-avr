@@ -1,0 +1,24 @@
+Committed
+Binutils 2.19
+--------------------------------------------------------------------------------
+--- include/opcode/avr.h.old	2008-01-14 21:50:24.960032000 -0700
++++ include/opcode/avr.h	2008-01-14 21:51:16.435550300 -0700
+@@ -34,6 +34,7 @@
+ #define AVR_ISA_TINY1 (AVR_ISA_1200 | AVR_ISA_LPM)
+ #define AVR_ISA_PWMx  (AVR_ISA_M8   | AVR_ISA_BRK)
+ #define AVR_ISA_2xxx  (AVR_ISA_TINY1 | AVR_ISA_SRAM)
++#define AVR_ISA_RF401 (AVR_ISA_2xxx | AVR_ISA_MOVW | AVR_ISA_LPMX)
+ #define AVR_ISA_TINY2 (AVR_ISA_2xxx | AVR_ISA_MOVW | AVR_ISA_LPMX | \
+                        AVR_ISA_SPM  | AVR_ISA_BRK)
+ #define AVR_ISA_M8    (AVR_ISA_2xxx | AVR_ISA_MUL | AVR_ISA_MOVW | \
+--- gas/config/tc-avr.c.old	2008-01-14 21:46:45.595033500 -0700
++++ gas/config/tc-avr.c	2008-01-14 21:51:38.911750800 -0700
+@@ -84,7 +84,7 @@ static struct mcu_type_s mcu_types[] =
+   {"at90s8515",  AVR_ISA_2xxx,    bfd_mach_avr2},
+   {"at90s8535",  AVR_ISA_2xxx,    bfd_mach_avr2},
+   {"at90c8534",  AVR_ISA_2xxx,    bfd_mach_avr2},
+-  {"at86rf401",  AVR_ISA_2xxx,    bfd_mach_avr2},
++  {"at86rf401",  AVR_ISA_RF401,   bfd_mach_avr2},
+   {"attiny13",   AVR_ISA_TINY2,   bfd_mach_avr2},
+   {"attiny2313", AVR_ISA_TINY2,   bfd_mach_avr2},
+   {"attiny261",  AVR_ISA_TINY2,   bfd_mach_avr2},
