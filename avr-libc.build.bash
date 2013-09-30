@@ -7,6 +7,10 @@ fi
 
 tar xfjv avr-libc-1.6.4.tar.bz2
 
+cd avr-libc-1.6.4
+for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
+cd -
+
 cp avr-libc-patches/eeprom.h avr-libc-1.6.4/include/avr/eeprom.h
 
 mkdir -p objdir
@@ -19,7 +23,6 @@ cd avr-libc-build
 
 CONFARGS=" \
 	--prefix=$PREFIX \
-	--disable-shared \
 	--host=avr"
 
 PATH=$PREFIX/bin:$PATH CFLAGS=-w CXXFLAGS=-w ../avr-libc-1.6.4/configure $CONFARGS
