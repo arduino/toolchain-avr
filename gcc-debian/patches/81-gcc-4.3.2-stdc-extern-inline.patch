@@ -1,0 +1,26 @@
+diff -ru gcc-4.3.2-orig/gcc/cp/cfns.gperf gcc-4.3.2/gcc/cp/cfns.gperf
+--- gcc/cp/cfns.gperf	2003-07-25 16:57:43.000000000 +0300
++++ gcc/cp/cfns.gperf	2013-10-31 16:45:12.000000000 +0200
+@@ -4,8 +4,10 @@
+ #endif
+ static unsigned int hash (const char *, unsigned int);
+ #ifdef __GNUC__
++#if !defined(__GNUC_STDC_INLINE__)
+ __inline
++#endif
+ #endif
+ const char * libc_name_p (const char *, unsigned int);
+ %}
+ %%
+diff -ru gcc-4.3.2-orig/gcc/toplev.h gcc-4.3.2/gcc/toplev.h
+--- gcc/toplev.h	2007-09-23 22:18:27.000000000 +0300
++++ gcc/toplev.h	2013-10-31 16:35:27.000000000 +0200
+@@ -161,7 +161,7 @@
+ extern int floor_log2                  (unsigned HOST_WIDE_INT);
+ 
+ /* Inline versions of the above for speed.  */
+-#if GCC_VERSION >= 3004
++#if GCC_VERSION >= 3004 && !defined(__GNUC_STDC_INLINE__)
+ # if HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONG
+ #  define CLZ_HWI __builtin_clzl
+ #  define CTZ_HWI __builtin_ctzl
