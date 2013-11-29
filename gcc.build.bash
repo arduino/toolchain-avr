@@ -30,7 +30,24 @@ CONFARGS=" \
 	--with-dwarf2 \
 	--target=avr"
 
-CFLAGS=-w CXXFLAGS=-w ../gcc-4.3.2/configure $CONFARGS
+if [ `uname -s` == "Darwin" ]
+then
+   # On Mac OS X install wget, libgmp, libmpfr and libmpc using Macports:
+   #
+   #   sudo port install gmp
+   #   sudo port install mpfr
+   #   sudo port install mpc
+   #
+   CONFARGS=$CONFARGS" \
+	--with-gmp=/opt/local \
+	--with-mpfr=/opt/local \
+	--with-mpc=/opt/local"
+
+   # Use default system libraries (no other Macports libraries)
+   LDFLAGS=-L/usr/lib
+fi
+
+CFLAGS=-w CXXFLAGS=-w LDFLAGS="$LDFLAGS" ../gcc-4.3.2/configure $CONFARGS
 
 nice -n 10 make -j 5
 
