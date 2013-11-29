@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+# On Mac OS X install wget using Macports:
+#
+#   sudo port selfupdate
+#   sudo port upgrade outdated
+#   sudo port install wget
+
 if [[ ! -f gcc-4.3.2.tar.bz2 ]] ;
 then
 	wget ftp://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-4.3.2/gcc-4.3.2.tar.bz2
@@ -30,7 +36,24 @@ CONFARGS=" \
 	--with-dwarf2 \
 	--target=avr"
 
-CFLAGS=-w CXXFLAGS=-w ../gcc-4.3.2/configure $CONFARGS
+if [ `uname -s` == "Darwin" ]
+then
+   # On Mac OS X install wget, libgmp, libmpfr and libmpc using Macports:
+   #
+   #   sudo port install gmp
+   #   sudo port install mpfr
+   #   sudo port install mpc
+   #
+   CONFARGS=$CONFARGS" \
+	--with-gmp=/opt/local \
+	--with-mpfr=/opt/local \
+	--with-mpc=/opt/local"
+
+   # Use default system libraries (no other Macports libraries)
+   LDFLAGS=-L/usr/lib
+fi
+
+CFLAGS=-w CXXFLAGS=-w LDFLAGS="$LDFLAGS" ../gcc-4.3.2/configure $CONFARGS
 
 nice -n 10 make -j 5
 
