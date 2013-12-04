@@ -1,7 +1,10 @@
 *.bz2
+*.tar.gz
 objdir
 *-build
 avr-libc-1.6.4
 binutils-2.20.1
 gcc-4.3.2
+avrdude-5.11.1
+gpio-avrdude-1138
 
