@@ -5,7 +5,7 @@ then
 	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-5.11.1.tar.gz
 fi
 
-tar xfjv avrdude-5.11.1.tar.gz
+tar xfzv avrdude-5.11.1.tar.gz
 
 mkdir -p objdir
 cd objdir
