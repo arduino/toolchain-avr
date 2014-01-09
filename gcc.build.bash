@@ -43,7 +43,7 @@ fi
 
 CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../gcc-4.3.2/configure $CONFARGS
 
-if [ -n "$MAKE_JOBS" ]; then
+if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 

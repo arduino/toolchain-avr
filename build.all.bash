@@ -10,3 +10,4 @@ rm -rf objdir
 ./gpio-avrdude.build.bash
 
 rm -rf objdir/{info,man,share}
+

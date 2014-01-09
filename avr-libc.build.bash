@@ -27,7 +27,7 @@ CONFARGS=" \
 
 PATH=$PREFIX/bin:$PATH CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
 
-if [ -n "$MAKE_JOBS" ]; then
+if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
