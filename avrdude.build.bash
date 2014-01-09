@@ -18,7 +18,7 @@ cd avrdude-build
 CONFARGS=" \
 	--prefix=$PREFIX"
 
-CFLAGS=-w CXXFLAGS=-w ../avrdude-5.11.1/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avrdude-5.11.1/configure $CONFARGS
 
 nice -n 10 make -j 5
 

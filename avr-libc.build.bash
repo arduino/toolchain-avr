@@ -25,7 +25,7 @@ CONFARGS=" \
 	--prefix=$PREFIX \
 	--host=avr"
 
-PATH=$PREFIX/bin:$PATH CFLAGS=-w CXXFLAGS=-w ../avr-libc-1.6.4/configure $CONFARGS
+PATH=$PREFIX/bin:$PATH CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
 
 PATH=$PREFIX/bin:$PATH nice -n 10 make -j 5
 

@@ -23,7 +23,7 @@ CONFARGS=" \
         --enable-linuxgpio \
         --program-prefix=gpio-"
 
-CFLAGS=-w CXXFLAGS=-w ../gpio-avrdude-1138/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../gpio-avrdude-1138/configure $CONFARGS
 
 nice -n 10 make -j 5
 

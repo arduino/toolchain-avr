@@ -27,7 +27,7 @@ CONFARGS=" \
 	--with-dwarf2 \
 	--target=avr"
 
-CFLAGS=-w CXXFLAGS=-w ../binutils-2.20.1/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../binutils-2.20.1/configure $CONFARGS
 
 nice -n 10 make -j 5
 
