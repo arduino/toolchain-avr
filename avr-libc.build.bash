@@ -27,7 +27,11 @@ CONFARGS=" \
 
 PATH=$PREFIX/bin:$PATH CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
 
-PATH=$PREFIX/bin:$PATH nice -n 10 make -j 5
+if [ -n "$MAKE_JOBS" ]; then
+	MAKE_JOBS="2"
+fi
+
+PATH=$PREFIX/bin:$PATH nice -n 10 make -j $MAKE_JOBS
 
 PATH=$PREFIX/bin:$PATH make install 
 

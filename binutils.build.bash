@@ -2,7 +2,7 @@
 
 if [[ ! -f binutils-2.20.1a.tar.bz2  ]] ;
 then
-	wget ftp://gcc.gnu.org/pub/binutils/releases/binutils-2.20.1a.tar.bz2
+	wget ftp://ftp.fu-berlin.de/unix/gnu/binutils/binutils-2.20.1a.tar.bz2
 fi
 
 tar xfjv binutils-2.20.1a.tar.bz2
@@ -29,7 +29,11 @@ CONFARGS=" \
 
 CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../binutils-2.20.1/configure $CONFARGS
 
-nice -n 10 make -j 5
+if [ -n "$MAKE_JOBS" ]; then
+	MAKE_JOBS="2"
+fi
+
+nice -n 10 make -j $MAKE_JOBS
 
 make install 
 

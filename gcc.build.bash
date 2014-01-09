@@ -32,18 +32,22 @@ CONFARGS=" \
 
 if [ `uname -s` == "Darwin" ]
 then
-   CONFARGS="$CONFARGS \
-	--with-gmp=/opt/local \
-	--with-mpfr=/opt/local \
-	--with-mpc=/opt/local"
+	CONFARGS="$CONFARGS \
+		--with-gmp=/opt/local \
+		--with-mpfr=/opt/local \
+		--with-mpc=/opt/local"
 
-   # Use default system libraries (no other Macports libraries)
-   LDFLAGS="$LDFLAGS -L/usr/lib"
+	# Use default system libraries (no other Macports libraries)
+	LDFLAGS="$LDFLAGS -L/usr/lib"
 fi
 
 CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../gcc-4.3.2/configure $CONFARGS
 
-nice -n 10 make -j 5
+if [ -n "$MAKE_JOBS" ]; then
+	MAKE_JOBS="2"
+fi
+
+nice -n 10 make -j $MAKE_JOBS
 
 make install 
 

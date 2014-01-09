@@ -20,7 +20,11 @@ CONFARGS=" \
 
 CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avrdude-5.11.1/configure $CONFARGS
 
-nice -n 10 make -j 5
+if [ -n "$MAKE_JOBS" ]; then
+	MAKE_JOBS="2"
+fi
+
+nice -n 10 make -j $MAKE_JOBS
 
 make install 
 
