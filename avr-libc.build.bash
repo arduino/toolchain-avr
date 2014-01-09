@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 if [[ ! -f avr-libc-1.6.4.tar.bz2 ]] ;
 then

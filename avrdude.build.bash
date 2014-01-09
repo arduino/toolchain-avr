@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 if [[ ! -f avrdude-5.11.1.tar.gz  ]] ;
 then
