@@ -27,13 +27,13 @@ CONFARGS=" \
 	--with-dwarf2 \
 	--target=avr"
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../binutils-2.20.1/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../binutils-2.20.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS
 
 make install 
 

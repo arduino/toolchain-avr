@@ -23,13 +23,13 @@ CONFARGS=" \
         --enable-linuxgpio \
         --program-prefix=gpio-"
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../gpio-avrdude-1138/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../gpio-avrdude-1138/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS
 
 make install
 

@@ -18,13 +18,13 @@ cd avrdude-build
 CONFARGS=" \
 	--prefix=$PREFIX"
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../avrdude-5.11.1/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avrdude-5.11.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS
 
 make install 
 

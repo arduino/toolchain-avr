@@ -25,13 +25,13 @@ CONFARGS=" \
 	--prefix=$PREFIX \
 	--host=avr"
 
-PATH=$PREFIX/bin:$PATH CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
+PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-PATH=$PREFIX/bin:$PATH CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS" nice -n 10 make -j $MAKE_JOBS
+PATH=$PREFIX/bin:$PATH nice -n 10 make -j $MAKE_JOBS
 
 PATH=$PREFIX/bin:$PATH make install 
 
