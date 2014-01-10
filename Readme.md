@@ -12,6 +12,12 @@ sudo port install gpatch +universal
 === Debian requirements
 
 ```bash
-sudo apt-get install build-essential
+sudo apt-get install build-essential gperf
 ```
+
+=== Windows requirements
+
+Cygwin installed with all the development tools and gperf
+
+Be aware the texinfo must be at version 4.13-4 since 5+ won't work
 
