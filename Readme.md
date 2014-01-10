@@ -19,5 +19,12 @@ sudo port install gpatch +universal
 
 ### Windows requirements
 
-[Cygwin](http://www.cygwin.com/) installed with all the development tools including gperf, bison, flex and texinfo (texinfo must be at version 4.13-4 since 5+ won't work)
+[Cygwin](http://www.cygwin.com/) installed with all the development tools including 
+- gperf
+- bison
+- flex
+- subversion
+- automake
+- autoconf
+- texinfo (must be at version 4.13-4 since 5+ won't work)
 
