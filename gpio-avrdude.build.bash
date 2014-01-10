@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 if [[ ! -d gpio-avrdude-1138 ]] ;
 then

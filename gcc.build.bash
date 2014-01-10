@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 if [[ ! -f gmp-4.3.2.tar.bz2  ]] ;
 then
