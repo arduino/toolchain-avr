@@ -57,11 +57,6 @@ CONFARGS=" \
 
 if [ `uname -s` == "Darwin" ]
 then
-	CONFARGS="$CONFARGS \
-		--with-gmp=/opt/local \
-		--with-mpfr=/opt/local \
-		--with-mpc=/opt/local"
-
 	# Use default system libraries (no other Macports libraries)
 	LDFLAGS="$LDFLAGS -L/usr/lib"
 fi
