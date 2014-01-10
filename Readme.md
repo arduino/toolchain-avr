@@ -1,4 +1,12 @@
-=== Mac OSX requirements
+Note: setup has been done on partially set up development machines. If, trying to compile on your machine, you find any package missing from the following list, please open an issue at once! We all can't afford wasting time on setup :)
+
+### Debian requirements
+
+```bash
+sudo apt-get install build-essential gperf bison
+```
+
+### Mac OSX requirements
 
 ```bash
 sudo port selfupdate
@@ -9,15 +17,7 @@ sudo port install autoconf +universal
 sudo port install gpatch +universal
 ```
 
-=== Debian requirements
+### Windows requirements
 
-```bash
-sudo apt-get install build-essential gperf
-```
-
-=== Windows requirements
-
-Cygwin installed with all the development tools and gperf
-
-Be aware the texinfo must be at version 4.13-4 since 5+ won't work
+[Cygwin](http://www.cygwin.com/) installed with all the development tools including gperf, bison, flex and texinfo (texinfo must be at version 4.13-4 since 5+ won't work)
 
