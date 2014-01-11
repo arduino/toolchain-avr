@@ -31,5 +31,12 @@ fi
 
 nice -n 10 make -j $MAKE_JOBS
 
+mv avrdude.conf gpio-avrdude.conf
+sed -i 's/sysconf_DATA = avrdude.conf/sysconf_DATA = gpio-avrdude.conf/g' Makefile
+sed -i 's|@if test -e ${DESTDIR}${sysconfdir}/avrdude.conf; then|@if test -e ${DESTDIR}${sysconfdir}/gpio-avrdude.conf; then|g' Makefile
+sed -i 's|cp -pR ${DESTDIR}${sysconfdir}/avrdude.conf|cp -pR ${DESTDIR}${sysconfdir}/gpio-avrdude.conf|g' Makefile
+sed -i 's|${DESTDIR}${sysconfdir}/avrdude.conf.bak|${DESTDIR}${sysconfdir}/gpio-avrdude.conf.bak|g' Makefile
+sed -i 's/rm -f avrdude.conf/rm -f gpio-avrdude.conf/g' Makefile
+
 make install
 
