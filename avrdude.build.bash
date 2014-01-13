@@ -18,7 +18,7 @@ cd avrdude-build
 CONFARGS=" \
 	--prefix=$PREFIX"
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS -static" ../avrdude-5.11.1/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avrdude-5.11.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
