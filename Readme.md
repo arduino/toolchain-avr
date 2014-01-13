@@ -3,7 +3,7 @@ Note: setup has been done on partially set up development machines. If, trying t
 ### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison
+sudo apt-get install build-essential gperf bison subversion texinfo
 ```
 
 ### Mac OSX requirements
