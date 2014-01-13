@@ -23,7 +23,7 @@ CONFARGS=" \
         --enable-linuxgpio \
         --program-prefix=gpio-"
 
-CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../gpio-avrdude-1138/configure $CONFARGS
+CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" LDFLAGS="$LDFLAGS -static" ../gpio-avrdude-1138/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
