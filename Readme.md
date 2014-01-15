@@ -28,3 +28,15 @@ sudo port install gpatch +universal
 - autoconf
 - texinfo (must be at version 4.13-4 since 5+ won't work)
 
+### Upstream credits
+
+Most patches come from Debian and a few from WinAVR. Thank you guys for the awesome work
+
+### Credits
+
+Consult the [list of contributors](https://github.com/arduino/toolchain-avr/graphs/contributors).
+
+### License
+
+The bash scripts are GPLv2 licensed. Every other software used by these bash scripts has its own license. Consult them to know their terms.
+
