@@ -25,7 +25,7 @@ CONFARGS=" \
 	--prefix=$PREFIX \
 	--host=avr"
 
-PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w $CFLAGS" CXXFLAGS="-w $CXXFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
+PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc-1.6.4/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
