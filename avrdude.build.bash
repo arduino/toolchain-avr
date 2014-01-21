@@ -26,5 +26,5 @@ fi
 
 nice -n 10 make -j $MAKE_JOBS
 
-make install 
+make install
 
