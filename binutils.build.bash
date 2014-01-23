@@ -8,7 +8,7 @@ fi
 tar xfjv binutils-2.20.1a.tar.bz2
 
 cd binutils-2.20.1
-for p in `cat ../binutils-debian/patchlist`; do echo; echo Applying $p ...; patch -p0 < ../binutils-debian/$p; done
+for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
 cd -
 
 mkdir -p objdir

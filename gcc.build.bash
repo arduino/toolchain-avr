@@ -29,7 +29,7 @@ fi
 tar xfjv gcc-4.3.2.tar.bz2
 
 cd gcc-4.3.2
-for p in ../gcc-debian/patches/*.patch; do echo Applying $p; patch -p0 < $p; done
+for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
 cd -
 
 mv gmp-4.3.2 gcc-4.3.2/gmp
