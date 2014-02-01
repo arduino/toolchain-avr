@@ -1,15 +1,18 @@
 #!/bin/bash -ex
 
-if [[ ! -f binutils-2.20.1a.tar.bz2  ]] ;
+if [[ ! -f binutils-2.23.2.tar.bz2  ]] ;
 then
-	wget ftp://ftp.fu-berlin.de/unix/gnu/binutils/binutils-2.20.1a.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.23.2.tar.bz2
 fi
 
-tar xfjv binutils-2.20.1a.tar.bz2
+tar xfjv binutils-2.23.2.tar.bz2
 
-cd binutils-2.20.1
+cd binutils-2.23.2
 for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
-cd -
+autoconf2.64
+cd ld
+autoreconf2.64
+cd ../../
 
 mkdir -p objdir
 cd objdir
@@ -23,17 +26,21 @@ CONFARGS=" \
 	--enable-languages=c,c++ \
 	--prefix=$PREFIX \
 	--disable-nls \
-	--disable-shared \
-	--with-dwarf2 \
+	--disable-werror \
+	--enable-install-libiberty \
+	--enable-install-libbfd \
 	--target=avr"
 
-CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.20.1/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.23.2/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS all-bfd TARGET-bfd=headers
+rm bfd/Makefile
+nice -n 10 make -j $MAKE_JOBS configure-host
+nice -n 10 make -j $MAKE_JOBS all
 
 make install
 
