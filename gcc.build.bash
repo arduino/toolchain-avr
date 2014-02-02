@@ -1,40 +1,47 @@
 #!/bin/bash -ex
 
-if [[ ! -f gmp-4.3.2.tar.bz2  ]] ;
+if [[ ! -f gmp-5.0.2.tar.bz2  ]] ;
 then
-	wget ftp://ftp.fu-berlin.de/unix/languages/gcc/infrastructure/gmp-4.3.2.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/gmp/gmp-5.0.2.tar.bz2
 fi
 
-tar xfjv gmp-4.3.2.tar.bz2
+tar xfjv gmp-5.0.2.tar.bz2
 
-if [[ ! -f mpfr-2.4.2.tar.bz2  ]] ;
+if [[ ! -f mpfr-3.0.0.tar.bz2  ]] ;
 then
-	wget ftp://ftp.fu-berlin.de/unix/languages/gcc/infrastructure/mpfr-2.4.2.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/mpfr/mpfr-3.0.0.tar.bz2
 fi
 
-tar xfjv mpfr-2.4.2.tar.bz2
+tar xfjv mpfr-3.0.0.tar.bz2
 
-if [[ ! -f mpc-0.8.1.tar.gz  ]] ;
+if [[ ! -f mpc-0.9.tar.gz  ]] ;
 then
-	wget ftp://ftp.fu-berlin.de/unix/languages/gcc/infrastructure/mpc-0.8.1.tar.gz
+	wget http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
 fi
 
-tar xfzv mpc-0.8.1.tar.gz
+tar xfzv mpc-0.9.tar.gz
 
-if [[ ! -f gcc-4.3.2.tar.bz2 ]] ;
+if [[ ! -f gcc-4.8.1.tar.bz2 ]] ;
 then
-	wget ftp://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-4.3.2/gcc-4.3.2.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/gcc/gcc-4.8.1/gcc-4.8.1.tar.bz2
 fi
 
-tar xfjv gcc-4.3.2.tar.bz2
+tar xfjv gcc-4.8.1.tar.bz2
 
-cd gcc-4.3.2
+pushd gcc-4.8.1
 for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
-cd -
+pushd gcc/config/avr/
+sh genopt.sh avr-mcus.def > avr-tables.opt
+cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
+popd
+pushd gcc
+autoconf2.64
+popd
+popd
 
-mv gmp-4.3.2 gcc-4.3.2/gmp
-mv mpfr-2.4.2 gcc-4.3.2/mpfr
-mv mpc-0.8.1 gcc-4.3.2/mpc
+mv gmp-5.0.2 gcc-4.8.1/gmp
+mv mpfr-3.0.0 gcc-4.8.1/mpfr
+mv mpc-0.9 gcc-4.8.1/mpc
 
 mkdir -p objdir
 cd objdir
@@ -45,14 +52,18 @@ mkdir -p gcc-build
 cd gcc-build
 
 CONFARGS=" \
+	--enable-fixed-point \
 	--enable-languages=c,c++ \
 	--prefix=$PREFIX \
 	--enable-long-long \
 	--disable-nls \
 	--disable-checking \
 	--disable-libssp \
+        --disable-libada \
 	--disable-shared \
+        --with-avrlibc=yes \
 	--with-dwarf2 \
+        --disable-doc \
 	--target=avr"
 
 if [ `uname -s` == "Darwin" ]
@@ -61,7 +72,7 @@ then
 	LDFLAGS="$LDFLAGS -L/usr/lib"
 fi
 
-CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc-4.3.2/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc-4.8.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

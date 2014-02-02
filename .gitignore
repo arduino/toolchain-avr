@@ -4,7 +4,7 @@ objdir
 *-build
 avr-libc-1.6.4
 binutils-2.23.2
-gcc-4.3.2
+gcc-4.8.1
 avrdude-5.11.1
 gpio-avrdude-1138
 *.zip

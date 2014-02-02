@@ -26,6 +26,7 @@ CONFARGS=" \
 	--enable-languages=c,c++ \
 	--prefix=$PREFIX \
 	--disable-nls \
+	--disable-doc \
 	--disable-werror \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
