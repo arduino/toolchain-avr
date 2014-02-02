@@ -2,7 +2,8 @@
 *.tar.gz
 objdir
 *-build
-avr-libc-1.6.4
+avr-libc-1.8.0/
+avr8-headers-6.2.0.142/
 binutils-2.23.2
 gcc-4.8.1
 avrdude-5.11.1
