@@ -28,6 +28,12 @@ fi
 
 tar xfjv gcc-4.8.1.tar.bz2
 
+AUTOCONF="autoconf2.64"
+if [ `uname -s` == "Darwin" ]
+then
+	AUTOCONF="autoconf264"
+fi
+
 pushd gcc-4.8.1
 for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
 pushd gcc/config/avr/
@@ -35,7 +41,7 @@ sh genopt.sh avr-mcus.def > avr-tables.opt
 cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
 popd
 pushd gcc
-autoconf2.64
+$AUTOCONF
 popd
 popd
 
