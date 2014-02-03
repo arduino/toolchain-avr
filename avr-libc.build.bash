@@ -1,5 +1,17 @@
 #!/bin/bash -ex
 
+if [[ ! -d toolsdir  ]] ;
+then
+	echo "You must first build the tools: run build_tools.bash"
+	exit 1
+fi
+
+cd toolsdir/bin
+TOOLS_BIN_PATH=`pwd`
+cd -
+
+export PATH="$TOOLS_BIN_PATH:$PATH"
+
 if [[ ! -f avr-libc-1.8.0.tar.bz2 ]] ;
 then
 	wget http://download.savannah.gnu.org/releases/avr-libc/avr-libc-1.8.0.tar.bz2
@@ -21,7 +33,7 @@ mv avr avr8-headers-6.2.0.142
 
 for i in avr8-headers-6.2.0.142/io[0-9a-zA-Z]*.h
 do
-	cp --verbose --force $i avr-libc-1.8.0/include/avr/
+	cp -v -f $i avr-libc-1.8.0/include/avr/
 done
 
 cd avr-libc-1.8.0
