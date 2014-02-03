@@ -28,6 +28,7 @@ sudo port install autoconf264 +universal
 - automake
 - autoconf
 - texinfo (must be at version 4.13-4 since 5+ won't work)
+- gcc-tool-epoch2-autoconf
 
 ### Upstream credits
 

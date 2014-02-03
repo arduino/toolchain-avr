@@ -28,12 +28,6 @@ fi
 
 tar xfjv gcc-4.8.1.tar.bz2
 
-AUTOCONF="autoconf2.64"
-if [ `uname -s` == "Darwin" ]
-then
-	AUTOCONF="autoconf264"
-fi
-
 pushd gcc-4.8.1
 for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
 pushd gcc/config/avr/

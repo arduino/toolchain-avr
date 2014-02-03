@@ -7,14 +7,6 @@ fi
 
 tar xfjv binutils-2.23.2.tar.bz2
 
-AUTOCONF="autoconf2.64"
-AUTORECONF="autoreconf2.64"
-if [ `uname -s` == "Darwin" ]
-then
-	AUTOCONF="autoconf264"
-	AUTORECONF="autoreconf264"
-fi
-
 cd binutils-2.23.2
 for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
 $AUTOCONF

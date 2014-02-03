@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-CC="gcc -m32" CXX="g++ -m32" ./build.all.bash
+AUTOCONF="autoconf2.64" AUTORECONF="autoreconf2.64" CC="gcc -m32" CXX="g++ -m32" ./build.all.bash
 
 rm -f avr-toolchain-*.zip
 cd objdir
