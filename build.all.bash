@@ -1,7 +1,9 @@
 #!/bin/bash -ex
 
-rm -rf objdir
+rm -rf objdir toolsdir
 
+./clean.bash
+./tools.bash
 ./clean.bash
 ./binutils.build.bash
 ./clean.bash

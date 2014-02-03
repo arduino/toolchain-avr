@@ -1,5 +1,17 @@
 #!/bin/bash -ex
 
+if [[ ! -d toolsdir  ]] ;
+then
+	echo "You must first build the tools: run build_tools.bash"
+	exit 1
+fi
+
+cd toolsdir/bin
+TOOLS_BIN_PATH=`pwd`
+cd -
+
+export PATH="$TOOLS_BIN_PATH:$PATH"
+
 if [[ ! -f gmp-5.0.2.tar.bz2  ]] ;
 then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/gmp/gmp-5.0.2.tar.bz2
@@ -35,7 +47,7 @@ sh genopt.sh avr-mcus.def > avr-tables.opt
 cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
 popd
 pushd gcc
-$AUTOCONF
+autoconf
 popd
 popd
 

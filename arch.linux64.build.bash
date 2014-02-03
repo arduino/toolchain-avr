@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-AUTOCONF="autoconf2.64" AUTORECONF="autoreconf2.64" ./build.all.bash
+./build.all.bash
 
 rm -f avr-toolchain-*.zip
 cd objdir

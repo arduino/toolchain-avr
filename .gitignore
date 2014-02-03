@@ -1,6 +1,7 @@
 *.bz2
 *.tar.gz
 objdir
+toolsdir
 *-build
 avr-libc-1.8.0/
 avr8-headers-6.2.0.142/

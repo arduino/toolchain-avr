@@ -1,5 +1,17 @@
 #!/bin/bash -ex
 
+if [[ ! -d toolsdir  ]] ;
+then
+	echo "You must first build the tools: run build_tools.bash"
+	exit 1
+fi
+
+cd toolsdir/bin
+TOOLS_BIN_PATH=`pwd`
+cd -
+
+export PATH="$TOOLS_BIN_PATH:$PATH"
+
 if [[ ! -f binutils-2.23.2.tar.bz2  ]] ;
 then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.23.2.tar.bz2
@@ -9,9 +21,9 @@ tar xfjv binutils-2.23.2.tar.bz2
 
 cd binutils-2.23.2
 for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
-$AUTOCONF
+autoconf
 cd ld
-$AUTORECONF
+autoreconf
 cd ../../
 
 mkdir -p objdir

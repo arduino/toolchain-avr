@@ -3,7 +3,7 @@ Note: setup has been done on partially set up development machines. If, trying t
 ### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake autoconf2.64
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake
 ```
 
 ### Mac OSX requirements
@@ -15,7 +15,6 @@ sudo port install wget +universal
 sudo port install automake +universal
 sudo port install autoconf +universal
 sudo port install gpatch +universal
-sudo port install autoconf264 +universal
 ```
 
 ### Windows requirements
@@ -28,7 +27,6 @@ sudo port install autoconf264 +universal
 - automake
 - autoconf
 - texinfo (must be at version 4.13-4 since 5+ won't work)
-- gcc-tool-epoch2-autoconf
 
 ### Upstream credits
 
