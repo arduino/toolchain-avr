@@ -11,6 +11,3 @@ rm -rf objdir
 ./clean.bash
 ./avrdude.build.bash
 ./clean.bash
-./gpio-avrdude.build.bash
-./clean.bash
-
