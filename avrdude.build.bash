@@ -22,7 +22,7 @@ cd avrdude-build
 
 CONFARGS=" \
 	--prefix=$PREFIX \
-        --enable-linuxgpio"
+	--enable-linuxgpio"
 
 CFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CFLAGS" CXXFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS
 
