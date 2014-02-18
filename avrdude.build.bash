@@ -1,11 +1,16 @@
 #!/bin/bash -ex
 
-if [[ ! -f avrdude-5.11.1.tar.gz  ]] ;
+if [[ ! -f avrdude-6.0.1.tar.gz  ]] ;
 then
-	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-5.11.1.tar.gz
+	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-6.0.1.tar.gz
 fi
 
-tar xfzv avrdude-5.11.1.tar.gz
+tar xfzv avrdude-6.0.1.tar.gz
+
+cd avrdude-6.0.1
+for p in ../avrdude-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
+./bootstrap
+cd -
 
 mkdir -p objdir
 cd objdir
@@ -16,9 +21,10 @@ mkdir -p avrdude-build
 cd avrdude-build
 
 CONFARGS=" \
-	--prefix=$PREFIX"
+	--prefix=$PREFIX \
+	--enable-linuxgpio"
 
-CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-5.11.1/configure $CONFARGS
+CFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CFLAGS" CXXFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
