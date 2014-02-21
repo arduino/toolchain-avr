@@ -1,0 +1,11 @@
+--- a/libc/stdlib/malloc.c	2014-02-21 17:03:40.606098680 +0100
++++ b/libc/stdlib/malloc.c	2014-02-21 17:03:51.946098314 +0100
+@@ -56,7 +56,7 @@
+  
+ /* May be changed by the user only before the first malloc() call.  */
+ 
+-size_t __malloc_margin = 32;
++size_t __malloc_margin = 128;
+ char *__malloc_heap_start = &__heap_start;
+ char *__malloc_heap_end = &__heap_end;
+ 
