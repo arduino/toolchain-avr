@@ -28,6 +28,7 @@ sudo port install libusb +universal
 - automake
 - autoconf
 - texinfo (must be at version 4.13-4 since 5+ won't work)
+- libusb1.0 and libusb1.0-devel
 
 ### Upstream credits
 
