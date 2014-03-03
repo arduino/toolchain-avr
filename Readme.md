@@ -40,7 +40,7 @@ Easy solution: as soon as you've installed the additional package, re-run cygwin
 
 ### Upstream credits
 
-Build process ported from Debian. Most patches come Atmel. Thank you guys for your awesome work.
+Build process ported from Debian. Most patches come from Atmel. Thank you guys for your awesome work.
 
 ### Credits
 
