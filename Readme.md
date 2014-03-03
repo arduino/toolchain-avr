@@ -34,7 +34,7 @@ You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86
 - patch
 - automake
 - autoconf
- -gcc-g++
+- gcc-g++
 - texinfo (must be at version 4.13-4 since 5+ won't work)
 - libusb1.0, libusb1.0-devel
 
