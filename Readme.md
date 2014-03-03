@@ -40,7 +40,7 @@ Easy solution: as soon as you've installed the additional package, re-run cygwin
 
 ### Upstream credits
 
-Most patches come from Debian and a few from WinAVR. Thank you guys for the awesome work
+Build process ported from Debian. Most patches come Atmel. Thank you guys for your awesome work.
 
 ### Credits
 
