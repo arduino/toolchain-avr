@@ -8,6 +8,8 @@ sudo apt-get install build-essential gperf bison subversion texinfo zip automake
 
 ### Mac OSX requirements
 
+You need to install MacPorts: https://www.macports.org/install.php. Once done, open a terminal and type:
+
 ```bash
 sudo port selfupdate
 sudo port upgrade outdated
@@ -20,7 +22,8 @@ sudo port install libusb +universal
 
 ### Windows requirements
 
-[Cygwin](http://www.cygwin.com/) installed with all the development tools including 
+You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86.exe`, use the `Search` text field to filter and select for installation the following packages:
+
 - git
 - wget
 - unzip
