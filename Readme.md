@@ -21,14 +21,22 @@ sudo port install libusb +universal
 ### Windows requirements
 
 [Cygwin](http://www.cygwin.com/) installed with all the development tools including 
+- git
+- wget
+- unzip
 - gperf
 - bison
 - flex
-- subversion
+- make
+- patch
 - automake
 - autoconf
+ -gcc-g++
 - texinfo (must be at version 4.13-4 since 5+ won't work)
-- libusb1.0 and libusb1.0-devel
+- libusb1.0, libusb1.0-devel
+
+A note on texinfo: due to dependencies, each time you update/modify your cygwin installation (for example: you install an additional package), texinfo will be upgraded to version 5+, while you need version 4+!
+Easy solution: as soon as you've installed the additional package, re-run cygwin setup, search texinfo, triple click on "Keep" until you read version 4, then click next.
 
 ### Upstream credits
 
