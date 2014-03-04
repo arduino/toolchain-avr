@@ -17,6 +17,29 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
+if [[ `uname -s` == CYGWIN* ]]
+then
+	if [[ ! -f libusb-win32-bin-1.2.6.0.zip  ]] ;
+	then
+		wget http://switch.dl.sourceforge.net/project/libusb-win32/libusb-win32-releases/1.2.6.0/libusb-win32-bin-1.2.6.0.zip
+	fi
+
+	mkdir -p tmp
+	rm -rf tmp/libusb-win32-bin*
+	cd tmp
+	unzip ../libusb-win32-bin-1.2.6.0.zip
+	cd libusb-win32-bin*
+	LIBUSB_DIR=`pwd`
+	cd ../..
+
+	CFLAGS="$CFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+	CXXFLAGS="$CXXFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+	LDFLAGS="$LDFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+
+	mkdir -p $PREFIX/bin
+	cp $LIBUSB_DIR/bin/x86/libusb0_x86.dll $PREFIX/bin/libusb0.dll
+fi
+
 mkdir -p avrdude-build
 cd avrdude-build
 
