@@ -1,5 +1,6 @@
 *.bz2
 *.tar.gz
+*.zip
 objdir
 toolsdir
 *-build
@@ -10,4 +11,4 @@ gcc-4.8.1
 avrdude-5.11.1
 avrdude-6.0.1
 gpio-avrdude-1138
-*.zip
+tmp
