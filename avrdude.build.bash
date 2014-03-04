@@ -40,6 +40,12 @@ then
 	cp $LIBUSB_DIR/bin/x86/libusb0_x86.dll $PREFIX/bin/libusb0.dll
 fi
 
+if [ `uname -s` == "Darwin" ]
+then
+	CFLAGS="$CFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
+	CXXFLAGS="$CXXFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
+fi
+
 mkdir -p avrdude-build
 cd avrdude-build
 
