@@ -28,13 +28,7 @@ then
 	LDFLAGS="$LDFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
 fi
 
-if [ `uname -s` == "Darwin" ]
-then
-	CFLAGS="$CFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
-	CXXFLAGS="$CXXFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
-fi
-
-if [ `uname -s` == "Linux" ]
+if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
 	CFLAGS="$CFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
 	CXXFLAGS="$CXXFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"

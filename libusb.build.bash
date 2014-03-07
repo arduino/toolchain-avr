@@ -19,7 +19,7 @@ then
 	cp $LIBUSB_DIR/bin/x86/libusb0_x86.dll $PREFIX/bin/libusb0.dll
 fi
 
-if [ `uname -s` == "Linux" ]
+if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
 	if [[ ! -f libusb-1.0.18.tar.bz2  ]] ;
 	then
