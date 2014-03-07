@@ -19,31 +19,26 @@ cd -
 
 if [[ `uname -s` == CYGWIN* ]]
 then
-	if [[ ! -f libusb-win32-bin-1.2.6.0.zip  ]] ;
-	then
-		wget http://switch.dl.sourceforge.net/project/libusb-win32/libusb-win32-releases/1.2.6.0/libusb-win32-bin-1.2.6.0.zip
-	fi
-
-	mkdir -p tmp
-	rm -rf tmp/libusb-win32-bin*
-	cd tmp
-	unzip ../libusb-win32-bin-1.2.6.0.zip
-	cd libusb-win32-bin*
+	cd tmp/libusb-win32-bin*
 	LIBUSB_DIR=`pwd`
 	cd ../..
 
 	CFLAGS="$CFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
 	CXXFLAGS="$CXXFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
 	LDFLAGS="$LDFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
-
-	mkdir -p $PREFIX/bin
-	cp $LIBUSB_DIR/bin/x86/libusb0_x86.dll $PREFIX/bin/libusb0.dll
 fi
 
 if [ `uname -s` == "Darwin" ]
 then
 	CFLAGS="$CFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
 	CXXFLAGS="$CXXFLAGS -I/opt/local/include/libusb-1.0/ -L/opt/local/lib"
+fi
+
+if [ `uname -s` == "Linux" ]
+then
+	CFLAGS="$CFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	CXXFLAGS="$CXXFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	LDFLAGS="$LDFLAGS -I$PREFIX/include -L$PREFIX/lib"
 fi
 
 mkdir -p avrdude-build

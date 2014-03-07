@@ -11,5 +11,7 @@ rm -rf objdir toolsdir
 ./clean.bash
 ./avr-libc.build.bash
 ./clean.bash
+./libusb.build.bash
+./clean.bash
 ./avrdude.build.bash
 ./clean.bash
