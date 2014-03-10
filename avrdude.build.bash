@@ -56,9 +56,3 @@ cd ../objdir/bin/
 mv avrdude avrdude_bin
 cp ../../avrdude .
 
-
-
-
-
-
-
