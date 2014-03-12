@@ -52,7 +52,9 @@ nice -n 10 make -j $MAKE_JOBS
 
 make install
 
-cd ../objdir/bin/
-mv avrdude avrdude_bin
-cp ../../avrdude .
-
+if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
+then
+	cd ../objdir/bin/
+	mv avrdude avrdude_bin
+	cp ../../avrdude-files/avrdude .
+fi
