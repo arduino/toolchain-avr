@@ -33,8 +33,8 @@ then
 	PREFIX=`pwd`
 	cd -
 
-	mkdir -p libusb-build
-	cd libusb-build
+	mkdir -p libusb-1.0-build
+	cd libusb-1.0-build
 
 	CONFARGS=" \
 		--prefix=$PREFIX \
@@ -52,4 +52,35 @@ then
 
 	make install
 
+	cd ..
+
+	if [[ ! -f libusb-compat-0.1.5.tar.bz2  ]] ;
+	then
+		wget http://switch.dl.sourceforge.net/project/libusb/libusb-compat-0.1/libusb-compat-0.1.5/libusb-compat-0.1.5.tar.bz2
+	fi
+
+	tar xfjv libusb-compat-0.1.5.tar.bz2
+
+	mkdir -p objdir
+	cd objdir
+	PREFIX=`pwd`
+	cd -
+
+	mkdir -p libusb-0.1-build
+	cd libusb-0.1-build
+
+	CONFARGS=" \
+		--prefix=$PREFIX \
+		--enable-static \
+		--enable-shared"
+
+	PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../libusb-compat-0.1.5/configure $CONFARGS
+
+	if [ -z "$MAKE_JOBS" ]; then
+		MAKE_JOBS="2"
+	fi
+
+	nice -n 10 make -j $MAKE_JOBS
+
+	make install
 fi

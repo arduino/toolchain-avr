@@ -30,9 +30,9 @@ fi
 
 if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
-	CFLAGS="$CFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
-	CXXFLAGS="$CXXFLAGS -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
-	LDFLAGS="$LDFLAGS -I$PREFIX/include -L$PREFIX/lib"
+	CFLAGS="$CFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	CXXFLAGS="$CXXFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	LDFLAGS="$LDFLAGS -I$PREFIX/include -I$PREFIX/include -L$PREFIX/lib"
 fi
 
 mkdir -p avrdude-build
