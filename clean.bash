@@ -1,6 +1,8 @@
 #!/bin/bash -ex
 
-rm -rf gcc-4.3.2 gmp-4.3.2 mpc-0.8.1 mpfr-2.4.2 binutils-2.20.1 avr-libc-1.6.4 avrdude-6.0.1 *-build
+rm -rf autoconf-2.64 automake-1.11.1
+
+rm -rf gcc-4.8.1 gmp-5.0.2 mpc-0.9 mpfr-3.0.0 binutils-2.23.2 avr-libc-1.8.0 avr8-headers-6.2.0.142 avrdude-6.0.1 libusb-1.0.18 *-build
 
 rm -rf objdir/{info,man,share}
 
