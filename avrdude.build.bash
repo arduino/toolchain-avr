@@ -57,8 +57,8 @@ then
 	cd ../objdir/bin/
 	mv avrdude avrdude_bin
 	cp ../../avrdude-files/avrdude .
-if [ `uname -s` == "Darwin" ]
-then
-	sed -i 's/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/g' avrdude 
-fi
+	if [ `uname -s` == "Darwin" ]
+	then
+		sed -i 's/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/g' avrdude 
+	fi
 fi
