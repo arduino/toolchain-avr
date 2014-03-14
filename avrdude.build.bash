@@ -17,6 +17,24 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
+if [[ `uname -s` == CYGWIN* ]]
+then
+	cd tmp/libusb-win32-bin*
+	LIBUSB_DIR=`pwd`
+	cd ../..
+
+	CFLAGS="$CFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+	CXXFLAGS="$CXXFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+	LDFLAGS="$LDFLAGS -I$LIBUSB_DIR/include -L$LIBUSB_DIR/lib/gcc"
+fi
+
+if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
+then
+	CFLAGS="$CFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	CXXFLAGS="$CXXFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	LDFLAGS="$LDFLAGS -I$PREFIX/include -I$PREFIX/include -L$PREFIX/lib"
+fi
+
 mkdir -p avrdude-build
 cd avrdude-build
 
@@ -34,3 +52,13 @@ nice -n 10 make -j $MAKE_JOBS
 
 make install
 
+if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
+then
+	cd ../objdir/bin/
+	mv avrdude avrdude_bin
+	cp ../../avrdude-files/avrdude .
+	if [ `uname -s` == "Darwin" ]
+	then
+		sed -i 's/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/g' avrdude 
+	fi
+fi
