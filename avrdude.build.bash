@@ -59,6 +59,6 @@ then
 	cp ../../avrdude-files/avrdude .
 	if [ `uname -s` == "Darwin" ]
 	then
-		sed -i 's/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/g' avrdude 
+		sed -i '' 's/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/g' avrdude
 	fi
 fi
