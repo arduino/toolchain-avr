@@ -1,5 +1,10 @@
 #!/bin/bash -ex
 
+mkdir -p objdir
+cd objdir
+PREFIX=`pwd`
+cd -
+
 if [[ `uname -s` == CYGWIN* ]]
 then
 	if [[ ! -f libusb-win32-bin-1.2.6.0.zip  ]] ;
@@ -28,11 +33,6 @@ then
 
 	tar xfjv libusb-1.0.18.tar.bz2
 
-	mkdir -p objdir
-	cd objdir
-	PREFIX=`pwd`
-	cd -
-
 	mkdir -p libusb-1.0-build
 	cd libusb-1.0-build
 
@@ -60,11 +60,6 @@ then
 	fi
 
 	tar xfjv libusb-compat-0.1.5.tar.bz2
-
-	mkdir -p objdir
-	cd objdir
-	PREFIX=`pwd`
-	cd -
 
 	mkdir -p libusb-0.1-build
 	cd libusb-0.1-build
