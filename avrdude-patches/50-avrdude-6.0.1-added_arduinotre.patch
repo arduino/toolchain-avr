@@ -42,7 +42,7 @@ new file mode 100644
 index 0000000..e27ab45
 --- /dev/null
 +++ arduinotre.c
-@@ -0,0 +1,418 @@
+@@ -0,0 +1,424 @@
 +/*
 + * avrdude - A Downloader/Uploader for AVR device programmers
 + * Copyright (C) 2013 Radoslav Kolev <radoslav@kolev.info>
@@ -83,6 +83,12 @@ index 0000000..e27ab45
 +#include "bitbang.h"
 +
 +#if HAVE_ARDUINOTRE
++
++/*
++ * Contains source code excerpts from:
++ *    https://github.com/chiragnagpal/beaglebone_mmap (http://chiragnagpal.com/examples.html)
++ *    http://elinux.org/images/a/aa/Devmem2.c
++ */
 +
 +/*
 + * GPIO user space helpers
