@@ -514,12 +514,13 @@ diff --git avrdude.conf.in avrdude.conf.in
 index 319919e..75c910b 100644
 --- avrdude.conf.in
 +++ avrdude.conf.in
-@@ -1212,7 +1212,29 @@ programmer
+@@ -1212,7 +1212,30 @@ programmer
  #  miso  = ?;
  #;
  
 -# some ultra cheap programmers use bitbanging on the 
-+#This programmer bitbangs GPIO lines using the Linux sysfs GPIO interface
++#This programmer bitbangs GPIO lines using the Linux sysfs GPIO interface and direct
++#GPIO memory registers read/write.
 +#
 +#To enable it set the configuration below to match the GPIO lines connected to the
 +#relevant ISP header pins and uncomment the entry definition. In case you don't
@@ -535,10 +536,10 @@ index 319919e..75c910b 100644
 +#  id    = "arduinotre";
 +#  desc  = "Arduino TRE bitbanging using GPIO registers";
 +#  type  = "arduinotre";
-+#  reset = ?;
-+#  sck   = ?;
-+#  mosi  = ?;
-+#  miso  = ?;
++#  reset = ~65;
++#  sck   = 49;
++#  mosi  = 48;
++#  miso  = 61;
 +#;
 +
 +# some ultra cheap programmers use bitbanging on the
