@@ -22,9 +22,10 @@ cd avrdude-build
 
 CONFARGS=" \
 	--prefix=$PREFIX \
-	--enable-linuxgpio"
+	--enable-linuxgpio \
+	--enable-arduinotre"
 
-CFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CFLAGS" CXXFLAGS="-w -O2 -DHAVE_LINUX_GPIO $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS
+CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
