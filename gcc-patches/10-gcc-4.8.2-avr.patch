@@ -1,5 +1,5 @@
---- gcc/config/avr/avr.c	2014/03/13 07:53:48	208531
-+++ gcc/config/avr/avr.c	2014/03/13 09:16:53	208532
+--- a/gcc/config/avr/avr.c	2014/03/13 07:53:48	208531
++++ b/gcc/config/avr/avr.c	2014/03/13 09:16:53	208532
 @@ -6812,8 +6812,8 @@
  
    /* Work out the shortest sequence.  */

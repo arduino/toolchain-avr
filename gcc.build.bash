@@ -41,7 +41,7 @@ fi
 tar xfjv gcc-4.8.1.tar.bz2
 
 pushd gcc-4.8.1
-for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
+for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
 pushd gcc/config/avr/
 sh genopt.sh avr-mcus.def > avr-tables.opt
 cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
