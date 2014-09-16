@@ -23,15 +23,15 @@ cd avr-libc-1.8.0
 for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
 cd -
 
-if [[ ! -f avr8-headers-6.2.0.142.zip ]] ;
+if [[ ! -f avr8-headers-6.2.0.334.zip ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.3/avr8-headers-6.2.0.142.zip
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.4/avr8-headers-6.2.0.334.zip
 fi
 
-unzip avr8-headers-6.2.0.142.zip
-mv avr avr8-headers-6.2.0.142
+unzip avr8-headers-6.2.0.334.zip
+mv avr avr8-headers-6.2.0.334
 
-for i in avr8-headers-6.2.0.142/io[0-9a-zA-Z]*.h
+for i in avr8-headers-6.2.0.334/io[0-9a-zA-Z]*.h
 do
 	cp -v -f $i avr-libc-1.8.0/include/avr/
 done
