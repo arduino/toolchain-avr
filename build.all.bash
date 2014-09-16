@@ -15,3 +15,6 @@ rm -rf objdir toolsdir
 ./clean.bash
 ./avrdude.build.bash
 ./clean.bash
+./gdb.build.bash
+./clean.bash
+
