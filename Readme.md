@@ -3,7 +3,7 @@ Note: setup has been done on partially set up development machines. If, trying t
 ### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev libtinfo-dev
 ```
 
 ### Mac OSX requirements
@@ -35,8 +35,8 @@ You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86
 - automake
 - autoconf
 - gcc-g++
-- texinfo (must be at version 4.13-4 since 5+ won't work)
-- libusb1.0 and libusb1.0-devel
+- texinfo (must be at version 4.13 since 5+ won't work)
+- libncurses-devel
 
 A note on texinfo: due to dependencies, each time you update/modify your cygwin installation (for example: you install an additional package), texinfo will be upgraded to version 5+, while you need version 4+!
 Easy solution: as soon as you've installed the additional package, re-run cygwin setup, search texinfo, triple click on "Keep" until you read version 4, then click next.
