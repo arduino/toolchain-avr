@@ -4,5 +4,5 @@
 
 rm -f avr-toolchain-*.zip
 cd objdir
-zip -r -9 ../avr-toolchain-armv7l-gcc-4.8.1.zip .
+zip -r -9 ../avr-toolchain-armv7l-3.4.4.zip .
 

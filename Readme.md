@@ -27,6 +27,7 @@ You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86
 - git
 - wget
 - unzip
+- zip
 - gperf
 - bison
 - flex

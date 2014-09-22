@@ -5,5 +5,5 @@ CFLAGS="-DWIN32" CXXFLAGS="-DWIN32" LDFLAGS="-DWIN32" CC="gcc -m32" CXX="g++ -m3
 
 rm -f avr-toolchain-*.zip
 cd objdir
-zip -r -9 ../avr-toolchain-win32-gcc-4.8.1.zip .
+zip -r -9 ../avr-toolchain-win32-3.4.4.zip .
 
