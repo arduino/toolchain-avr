@@ -35,6 +35,7 @@ CONFARGS=" \
 	--prefix=$PREFIX \
 	--disable-nls \
 	--disable-werror \
+	--disable-binutils \
 	--target=avr"
 
 CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb-7.7/configure $CONFARGS

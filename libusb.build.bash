@@ -5,7 +5,7 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
-if [[ `uname -s` == CYGWIN* ]]
+if [[ `uname -s` == CYGWIN* || `uname -s` == MINGW* ]]
 then
 	if [[ ! -f libusb-win32-bin-1.2.6.0.zip  ]] ;
 	then

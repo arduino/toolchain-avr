@@ -42,6 +42,13 @@ You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86
 A note on texinfo: due to dependencies, each time you update/modify your cygwin installation (for example: you install an additional package), texinfo will be upgraded to version 5+, while you need version 4+!
 Easy solution: as soon as you've installed the additional package, re-run cygwin setup, search texinfo, triple click on "Keep" until you read version 4, then click next.
 
+You also need to install MinGW: http://www.mingw.org/. Once you have run mingw-get-setup.exe, select and install (clicking on "Installation" -> "Apply changes") the following packages:
+
+- mingw-developer-toolkit
+- mingw32-base
+- mingw32-gcc-g++
+- msys-base
+
 ### Upstream credits
 
 Build process ported from Debian. Most patches come from Atmel. Thank you guys for your awesome work.

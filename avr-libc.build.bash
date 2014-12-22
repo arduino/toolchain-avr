@@ -55,6 +55,8 @@ CONFARGS=" \
 
 PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc-1.8.0/configure $CONFARGS
 
+for p in ../avr-libc-patches/*.patch.post.automake; do echo Applying $p; patch -p1 < $p; done
+
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
