@@ -31,7 +31,7 @@ then
 		wget http://switch.dl.sourceforge.net/project/libusb/libusb-1.0/libusb-1.0.18/libusb-1.0.18.tar.bz2
 	fi
 
-	tar xfjv libusb-1.0.18.tar.bz2
+	tar xfv libusb-1.0.18.tar.bz2
 
 	mkdir -p libusb-1.0-build
 	cd libusb-1.0-build
@@ -59,7 +59,7 @@ then
 		wget http://switch.dl.sourceforge.net/project/libusb/libusb-compat-0.1/libusb-compat-0.1.5/libusb-compat-0.1.5.tar.bz2
 	fi
 
-	tar xfjv libusb-compat-0.1.5.tar.bz2
+	tar xfv libusb-compat-0.1.5.tar.bz2
 
 	mkdir -p libusb-0.1-build
 	cd libusb-0.1-build

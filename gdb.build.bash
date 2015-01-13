@@ -12,15 +12,15 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f gdb-7.7.tar.bz2  ]] ;
+if [[ ! -f gdb-7.8.tar.xz  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/gdb/gdb-7.7.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/gdb/gdb-7.8.tar.xz
 fi
 
-tar xfjv gdb-7.7.tar.bz2
+tar xfv gdb-7.8.tar.xz
 
-cd gdb-7.7
-for p in ../gdb-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
+cd gdb-7.8
+for p in ../gdb-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
 cd -
 
 mkdir -p objdir
@@ -38,7 +38,7 @@ CONFARGS=" \
 	--disable-binutils \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb-7.7/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb-7.8/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

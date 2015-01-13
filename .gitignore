@@ -1,6 +1,6 @@
 .DS_Store
 *.bz2
-*.tar.gz
+*.tar.*
 *.zip
 objdir
 toolsdir
@@ -15,5 +15,5 @@ avrdude-5.11.1
 avrdude-6.0.1
 libusb-1.0.18
 libusb-compat-0.1.5
-gdb-7.7
+gdb-7.8
 tmp

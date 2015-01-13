@@ -1,7 +1,3 @@
-diff --git a/--exclude-vcs b/--exclude-vcs
-new file mode 100644
-index 0000000..9a0ffa9
-Binary files /dev/null and b/--exclude-vcs differ
 diff --git a/gcc/ChangeLog.AVR b/gcc/ChangeLog.AVR
 new file mode 100644
 index 0000000..ebc64d8
@@ -602,6 +598,31 @@ index ddb6d39..9efa48d 100644
  
        if (last)
  	{
+diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
+index 5acc42d..66abe66 100644
+--- a/gcc/cfgexpand.c
++++ b/gcc/cfgexpand.c
+@@ -2889,10 +2889,7 @@ expand_debug_expr (tree exp)
+ 	  op0 = plus_constant (inner_mode, op0, INTVAL (op1));
+ 	}
+ 
+-      if (POINTER_TYPE_P (TREE_TYPE (exp)))
+-	as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (exp)));
+-      else
+-	as = ADDR_SPACE_GENERIC;
++      as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (exp, 0))));
+ 
+       op0 = convert_debug_memory_address (targetm.addr_space.address_mode (as),
+ 					  op0, as);
+@@ -3410,7 +3407,7 @@ expand_debug_expr (tree exp)
+ 	  return NULL;
+ 	}
+ 
+-      as = TYPE_ADDR_SPACE (TREE_TYPE (exp));
++      as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (exp)));
+       op0 = convert_debug_memory_address (mode, XEXP (op0, 0), as);
+ 
+       return op0;
 diff --git a/gcc/common.opt b/gcc/common.opt
 index bdbd3b6..f025331 100644
 --- a/gcc/common.opt
@@ -622,19 +643,18 @@ index bdbd3b6..f025331 100644
  Common Joined UInteger Var(dwarf_version) Init(4) Negative(gstabs)
  Generate debug information in DWARF v2 (or later) format
 diff --git a/gcc/config/avr/avr-arch.h b/gcc/config/avr/avr-arch.h
-index 27cea73..30a6ce5 100644
+index 27cea73..646d9fb 100644
 --- a/gcc/config/avr/avr-arch.h
 +++ b/gcc/config/avr/avr-arch.h
-@@ -35,6 +35,8 @@ enum avr_arch
+@@ -35,6 +35,7 @@ enum avr_arch
    ARCH_AVR5,
    ARCH_AVR51,
    ARCH_AVR6,
-+  ARCH_AVR7,
 +  ARCH_AVRTINY,
    ARCH_AVRXMEGA2,
    ARCH_AVRXMEGA4,
    ARCH_AVRXMEGA5,
-@@ -75,6 +77,9 @@ typedef struct
+@@ -75,6 +76,9 @@ typedef struct
       and thus also the RAMPX, RAMPY and RAMPZ registers.  */
    int have_rampd;
  
@@ -644,7 +664,7 @@ index 27cea73..30a6ce5 100644
    /* Default start of data section address for architecture.  */
    int default_data_section_start;
  
-@@ -100,32 +105,12 @@ typedef struct
+@@ -100,35 +104,18 @@ typedef struct
    /* Index in avr_arch_types[].  */
    enum avr_arch arch;
  
@@ -680,7 +700,13 @@ index 27cea73..30a6ce5 100644
    /* Start of data section.  */
    int data_section_start;
  
-@@ -136,6 +121,42 @@ typedef struct
++  /* Start of text section. */
++  int text_section_start;
++
+   /* Number of 64k segments in the flash.  */
+   int n_flash;
+ 
+@@ -136,6 +123,42 @@ typedef struct
    const char *const library_name;
  } avr_mcu_t;
  
@@ -724,10 +750,23 @@ index 27cea73..30a6ce5 100644
  
  typedef struct
 diff --git a/gcc/config/avr/avr-c.c b/gcc/config/avr/avr-c.c
-index 4e64405..a0b5f10 100644
+index 4e64405..a36656b 100644
 --- a/gcc/config/avr/avr-c.c
 +++ b/gcc/config/avr/avr-c.c
-@@ -322,6 +322,23 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
+@@ -298,7 +298,11 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
+   if (avr_current_arch->macro)
+     cpp_define_formatted (pfile, "__AVR_ARCH__=%s", avr_current_arch->macro);
+   if (avr_current_device->macro)
+-    cpp_define (pfile, avr_current_device->macro);
++    {
++      cpp_define (pfile, avr_current_device->macro);
++      cpp_define_formatted (pfile, "__AVR_DEVICE_NAME__=%s",
++			    avr_current_device->name);
++    }
+   if (AVR_HAVE_RAMPD)    cpp_define (pfile, "__AVR_HAVE_RAMPD__");
+   if (AVR_HAVE_RAMPX)    cpp_define (pfile, "__AVR_HAVE_RAMPX__");
+   if (AVR_HAVE_RAMPY)    cpp_define (pfile, "__AVR_HAVE_RAMPY__");
+@@ -322,6 +326,23 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
      }
    if (AVR_XMEGA)
      cpp_define (pfile, "__AVR_XMEGA__");
@@ -751,7 +790,7 @@ index 4e64405..a0b5f10 100644
    if (avr_current_arch->have_eijmp_eicall)
      {
        cpp_define (pfile, "__AVR_HAVE_EIJMP_EICALL__");
-@@ -346,7 +363,7 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
+@@ -346,7 +367,7 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
    if (TARGET_NO_INTERRUPTS)
      cpp_define (pfile, "__NO_INTERRUPTS__");
  
@@ -760,7 +799,7 @@ index 4e64405..a0b5f10 100644
      {
        cpp_define (pfile, "__AVR_ERRATA_SKIP__");
  
-@@ -354,6 +371,9 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
+@@ -354,6 +375,9 @@ avr_cpu_cpp_builtins (struct cpp_reader *pfile)
          cpp_define (pfile, "__AVR_ERRATA_SKIP_JMP_CALL__");
      }
  
@@ -771,10 +810,10 @@ index 4e64405..a0b5f10 100644
                          avr_current_arch->sfr_offset);
  
 diff --git a/gcc/config/avr/avr-devices.c b/gcc/config/avr/avr-devices.c
-index 48a9523..57617cc 100644
+index 48a9523..95e9b1f 100644
 --- a/gcc/config/avr/avr-devices.c
 +++ b/gcc/config/avr/avr-devices.c
-@@ -31,29 +31,31 @@ const avr_arch_t
+@@ -31,29 +31,30 @@ const avr_arch_t
  avr_arch_types[] =
  {
    /* unknown device specified */
@@ -811,7 +850,6 @@ index 48a9523..57617cc 100644
 +  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0x0060, 32, "5",   "avr5"  },
 +  { 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0x0060, 32, "51",  "avr51" },
 +  { 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0x0060, 32, "6",   "avr6"  },
-+  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0x0200, 32, "7",   "avr7"  },
  
 -  { 0, 1, 1, 1, 0, 0, 0, 1, 0, 0x2000,  0, "102", "avrxmega2" },
 -  { 0, 1, 1, 1, 1, 1, 0, 1, 0, 0x2000,  0, "104", "avrxmega4" },
@@ -827,31 +865,29 @@ index 48a9523..57617cc 100644
  };
  
  const avr_arch_info_t
-@@ -85,6 +87,11 @@ avr_texinfo[] =
+@@ -85,6 +86,9 @@ avr_texinfo[] =
    { ARCH_AVR6,
      "``Enhanced'' devices with 3-byte PC, i.e.@: with more than 128@tie{}KiB "
      "of program memory." },
-+  { ARCH_AVR7,
-+   "``Enhanced'' devices with 20@tie{}KiB of program memory starts at 0x8000."},
 +  { ARCH_AVRTINY,
 +    "``TINY'' Tiny core devices with 512@tie{}B up to 4@tie{}KiB of "
 +    "program memory." },
    { ARCH_AVRXMEGA2,
      "``XMEGA'' devices with more than 8@tie{}KiB and up to 64@tie{}KiB "
      "of program memory." },
-@@ -104,11 +111,11 @@ avr_texinfo[] =
+@@ -104,11 +108,11 @@ avr_texinfo[] =
  const avr_mcu_t
  avr_mcu_types[] =
  {
 -#define AVR_MCU(NAME, ARCH, MACRO, SP8, ERR_SKIP, DATA_SEC, N_FLASH, LIBNAME)\
 -  { NAME, ARCH, MACRO, SP8, ERR_SKIP, DATA_SEC, N_FLASH, LIBNAME },
-+#define AVR_MCU(NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, N_FLASH, LIBNAME)\
-+  { NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, N_FLASH, LIBNAME },
++#define AVR_MCU(NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, N_FLASH, LIBNAME)\
++  { NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, N_FLASH, LIBNAME },
  #include "avr-mcus.def"
  #undef AVR_MCU
      /* End of list.  */
 -  { NULL, ARCH_UNKNOWN, NULL, 0, 0, 0, 0, NULL }
-+  { NULL, ARCH_UNKNOWN, AVR_ISA_NONE, NULL, 0, 0, NULL }
++  { NULL, ARCH_UNKNOWN, AVR_ISA_NONE, NULL, 0, 0, 0, NULL }
  };
  
 diff --git a/gcc/config/avr/avr-fixed.md b/gcc/config/avr/avr-fixed.md
@@ -919,16 +955,16 @@ index 7d9b525..b2f0b9a 100644
  
  ;; "*roundqq3.libgcc"  "*rounduqq3.libgcc"
 diff --git a/gcc/config/avr/avr-mcus.def b/gcc/config/avr/avr-mcus.def
-index 2a730ac..5797b9c 100644
+index 2a730ac..b9a7b8b 100644
 --- a/gcc/config/avr/avr-mcus.def
 +++ b/gcc/config/avr/avr-mcus.def
-@@ -33,305 +33,311 @@
+@@ -33,305 +33,314 @@
  
     Before including this file, define a macro:
  
 -   AVR_MCU (NAME, ARCH, MACRO, SHORT_SP, ERRATA_SKIP, DATA_SEC, N_FLASH,
 -            LIBRARY_NAME)
-+   AVR_MCU (NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, N_FLASH, LIBRARY_NAME)
++   AVR_MCU (NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, N_FLASH, LIBRARY_NAME)
  
     where the arguments are the fields of avr_mcu_t:
     
@@ -952,10 +988,11 @@ index 2a730ac..5797b9c 100644
 +       DATA_SEC      First address of SRAM, used in  -Tdata=  by the driver.
  
 -       DATA_SEC     First address of SRAM, used in  -Tdata=  by the driver.
-+       N_FLASH       Number of 64 KiB flash segments, rounded up.
++       TEXT_SEC      First address of Flash, used in -Text= by the driver.
  
 -       N_FLASH      Number of 64 KiB flash segments, rounded up.
--
++       N_FLASH       Number of 64 KiB flash segments, rounded up.
+ 
 -       LIBRARY_NAME Used by the driver to linke startup code from avr-libc
 -                    as of  crt<LIBRARY_NAME>.o
 +       LIBRARY_NAME  Used by the driver to linke startup code from avr-libc
@@ -1174,220 +1211,221 @@ index 2a730ac..5797b9c 100644
 -AVR_MCU ("atmega2560",           ARCH_AVR6, "__AVR_ATmega2560__",        0, 0, 0x0200, 4, "m2560")
 -AVR_MCU ("atmega2561",           ARCH_AVR6, "__AVR_ATmega2561__",        0, 0, 0x0200, 4, "m2561")
 +/* Classic, <= 8K, 2-byte PC.  */
-+AVR_MCU ("avr2",                 ARCH_AVR2, AVR_ERRATA_SKIP, NULL,                     0x0060, 6, "s8515")
-+AVR_MCU ("at90s2313",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2313__",         0x0060, 1, "s2313")
-+AVR_MCU ("at90s2323",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2323__",         0x0060, 1, "s2323")
-+AVR_MCU ("at90s2333",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2333__",         0x0060, 1, "s2333")
-+AVR_MCU ("at90s2343",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2343__",         0x0060, 1, "s2343")
-+AVR_MCU ("attiny22",             ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny22__",          0x0060, 1, "tn22")
-+AVR_MCU ("attiny26",             ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny26__",          0x0060, 1, "tn26")
-+AVR_MCU ("at90s4414",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4414__",         0x0060, 1, "s4414")
-+AVR_MCU ("at90s4433",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S4433__",         0x0060, 1, "s4433")
-+AVR_MCU ("at90s4434",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4434__",         0x0060, 1, "s4434")
-+AVR_MCU ("at90s8515",            ARCH_AVR2, AVR_ERRATA_SKIP, "__AVR_AT90S8515__",      0x0060, 1, "s8515")
-+AVR_MCU ("at90c8534",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90C8534__",         0x0060, 1, "c8534")
-+AVR_MCU ("at90s8535",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S8535__",         0x0060, 1, "s8535")
++AVR_MCU ("avr2",                 ARCH_AVR2, AVR_ERRATA_SKIP, NULL,                     0x0060, 0x0, 6, "s8515")
++AVR_MCU ("at90s2313",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2313__",         0x0060, 0x0, 1, "s2313")
++AVR_MCU ("at90s2323",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2323__",         0x0060, 0x0, 1, "s2323")
++AVR_MCU ("at90s2333",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2333__",         0x0060, 0x0, 1, "s2333")
++AVR_MCU ("at90s2343",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2343__",         0x0060, 0x0, 1, "s2343")
++AVR_MCU ("attiny22",             ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny22__",          0x0060, 0x0, 1, "tn22")
++AVR_MCU ("attiny26",             ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny26__",          0x0060, 0x0, 1, "tn26")
++AVR_MCU ("at90s4414",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4414__",         0x0060, 0x0, 1, "s4414")
++AVR_MCU ("at90s4433",            ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S4433__",         0x0060, 0x0, 1, "s4433")
++AVR_MCU ("at90s4434",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4434__",         0x0060, 0x0, 1, "s4434")
++AVR_MCU ("at90s8515",            ARCH_AVR2, AVR_ERRATA_SKIP, "__AVR_AT90S8515__",      0x0060, 0x0, 1, "s8515")
++AVR_MCU ("at90c8534",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90C8534__",         0x0060, 0x0, 1, "c8534")
++AVR_MCU ("at90s8535",            ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S8535__",         0x0060, 0x0, 1, "s8535")
 +/* Classic + MOVW/LPMX, <= 8K + 2-byte PC.  */
-+AVR_MCU ("avr25",                ARCH_AVR25, AVR_ISA_NONE, NULL,                       0x0060, 1, "tn85")
-+AVR_MCU ("ata5272",              ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA5272__",          0x0100, 1, "a5272")
-+AVR_MCU ("ata6616c",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA6616C__",         0x0100, 1, "a6616c")
-+AVR_MCU ("attiny13",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13__",         0x0060, 1, "tn13")
-+AVR_MCU ("attiny13a",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13A__",        0x0060, 1, "tn13a")
-+AVR_MCU ("attiny2313",           ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313__",       0x0060, 1, "tn2313")
-+AVR_MCU ("attiny2313a",          ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313A__",      0x0060, 1, "tn2313a")
-+AVR_MCU ("attiny24",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24__",         0x0060, 1, "tn24")
-+AVR_MCU ("attiny24a",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24A__",        0x0060, 1, "tn24a")
-+AVR_MCU ("attiny4313",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny4313__",       0x0060, 1, "tn4313")
-+AVR_MCU ("attiny44",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44__",         0x0060, 1, "tn44")
-+AVR_MCU ("attiny44a",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44A__",        0x0060, 1, "tn44a")
-+AVR_MCU ("attiny441",			 ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny441__",		   0x0100, 1, "tn441")
-+AVR_MCU ("attiny84",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84__",         0x0060, 1, "tn84")
-+AVR_MCU ("attiny84a",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84A__",        0x0060, 1, "tn84")
-+AVR_MCU ("attiny25",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny25__",         0x0060, 1, "tn25")
-+AVR_MCU ("attiny45",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny45__",         0x0060, 1, "tn45")
-+AVR_MCU ("attiny85",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny85__",         0x0060, 1, "tn85")
-+AVR_MCU ("attiny261",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261__",        0x0060, 1, "tn261")
-+AVR_MCU ("attiny261a",           ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261A__",       0x0060, 1, "tn261a")
-+AVR_MCU ("attiny461",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461__",        0x0060, 1, "tn461")
-+AVR_MCU ("attiny461a",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461A__",       0x0060, 1, "tn461a")
-+AVR_MCU ("attiny861",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861__",        0x0060, 1, "tn861")
-+AVR_MCU ("attiny861a",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861A__",       0x0060, 1, "tn861a")
-+AVR_MCU ("attiny43u",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny43U__",        0x0060, 1, "tn43u")
-+AVR_MCU ("attiny87",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny87__",         0x0100, 1, "tn87")
-+AVR_MCU ("attiny48",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny48__",         0x0100, 1, "tn48")
-+AVR_MCU ("attiny88",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny88__",         0x0100, 1, "tn88")
-+AVR_MCU ("attiny828",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny828__",        0x0100, 1, "tn828")
-+AVR_MCU ("attiny841",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny841__",        0x0100, 1, "tn841")
-+AVR_MCU ("at86rf401",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_AT86RF401__",        0x0060, 1, "86401")
++AVR_MCU ("avr25",                ARCH_AVR25, AVR_ISA_NONE, NULL,                       0x0060, 0x0, 1, "tn85")
++AVR_MCU ("ata5272",              ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA5272__",          0x0100, 0x0, 1, "a5272")
++AVR_MCU ("ata6616c",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA6616C__",         0x0100, 0x0, 1, "a6616c")
++AVR_MCU ("attiny13",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13__",         0x0060, 0x0, 1, "tn13")
++AVR_MCU ("attiny13a",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13A__",        0x0060, 0x0, 1, "tn13a")
++AVR_MCU ("attiny2313",           ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313__",       0x0060, 0x0, 1, "tn2313")
++AVR_MCU ("attiny2313a",          ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313A__",      0x0060, 0x0, 1, "tn2313a")
++AVR_MCU ("attiny24",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24__",         0x0060, 0x0, 1, "tn24")
++AVR_MCU ("attiny24a",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24A__",        0x0060, 0x0, 1, "tn24a")
++AVR_MCU ("attiny4313",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny4313__",       0x0060, 0x0, 1, "tn4313")
++AVR_MCU ("attiny44",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44__",         0x0060, 0x0, 1, "tn44")
++AVR_MCU ("attiny44a",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44A__",        0x0060, 0x0, 1, "tn44a")
++AVR_MCU ("attiny441",			 ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny441__",		   0x0100, 0x0, 1, "tn441")
++AVR_MCU ("attiny84",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84__",         0x0060, 0x0, 1, "tn84")
++AVR_MCU ("attiny84a",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84A__",        0x0060, 0x0, 1, "tn84")
++AVR_MCU ("attiny25",             ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny25__",         0x0060, 0x0, 1, "tn25")
++AVR_MCU ("attiny45",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny45__",         0x0060, 0x0, 1, "tn45")
++AVR_MCU ("attiny85",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny85__",         0x0060, 0x0, 1, "tn85")
++AVR_MCU ("attiny261",            ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261__",        0x0060, 0x0, 1, "tn261")
++AVR_MCU ("attiny261a",           ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261A__",       0x0060, 0x0, 1, "tn261a")
++AVR_MCU ("attiny461",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461__",        0x0060, 0x0, 1, "tn461")
++AVR_MCU ("attiny461a",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461A__",       0x0060, 0x0, 1, "tn461a")
++AVR_MCU ("attiny861",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861__",        0x0060, 0x0, 1, "tn861")
++AVR_MCU ("attiny861a",           ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861A__",       0x0060, 0x0, 1, "tn861a")
++AVR_MCU ("attiny43u",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny43U__",        0x0060, 0x0, 1, "tn43u")
++AVR_MCU ("attiny87",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny87__",         0x0100, 0x0, 1, "tn87")
++AVR_MCU ("attiny48",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny48__",         0x0100, 0x0, 1, "tn48")
++AVR_MCU ("attiny88",             ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny88__",         0x0100, 0x0, 1, "tn88")
++AVR_MCU ("attiny828",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny828__",        0x0100, 0x0, 1, "tn828")
++AVR_MCU ("attiny841",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny841__",        0x0100, 0x0, 1, "tn841")
++AVR_MCU ("at86rf401",            ARCH_AVR25, AVR_ISA_NONE, "__AVR_AT86RF401__",        0x0060, 0x0, 1, "86401")
 +/* Classic, > 8K, <= 64K + 2-byte PC + { JMP/CALL }.  */
-+AVR_MCU ("avr3",                 ARCH_AVR3, AVR_ISA_NONE, NULL,                        0x0060, 1, "43355")
-+AVR_MCU ("at43usb355",           ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT43USB355__",        0x0060, 1, "43355")
-+AVR_MCU ("at76c711",             ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT76C711__",          0x0060, 1, "76711")
++AVR_MCU ("avr3",                 ARCH_AVR3, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 1, "43355")
++AVR_MCU ("at43usb355",           ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT43USB355__",        0x0060, 0x0, 1, "43355")
++AVR_MCU ("at76c711",             ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT76C711__",          0x0060, 0x0, 1, "76711")
 +/* Classic, == 128K + 2-byte PC + {JMP/CALL, ELPM }.  */
-+AVR_MCU ("avr31",                ARCH_AVR31, AVR_ERRATA_SKIP, NULL,                    0x0060, 2, "m103")
-+AVR_MCU ("atmega103",            ARCH_AVR31, AVR_ERRATA_SKIP, "__AVR_ATmega103__",     0x0060, 2, "m103")
-+AVR_MCU ("at43usb320",           ARCH_AVR31, AVR_ISA_NONE, "__AVR_AT43USB320__",       0x0060, 2, "43320")
++AVR_MCU ("avr31",                ARCH_AVR31, AVR_ERRATA_SKIP, NULL,                    0x0060, 0x0, 2, "m103")
++AVR_MCU ("atmega103",            ARCH_AVR31, AVR_ERRATA_SKIP, "__AVR_ATmega103__",     0x0060, 0x0, 2, "m103")
++AVR_MCU ("at43usb320",           ARCH_AVR31, AVR_ISA_NONE, "__AVR_AT43USB320__",       0x0060, 0x0, 2, "43320")
 +/* Classic, >=16K, <=64K + 2-byte PC + MOVW/LPMX + JMP/CALL.  */
-+AVR_MCU ("avr35",                ARCH_AVR35, AVR_ISA_NONE, NULL,                       0x0100, 1, "usb162")
-+AVR_MCU ("ata5505",              ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA5505__",          0x0100, 1, "a5505")
-+AVR_MCU ("ata6617c",             ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA6617C__",         0x0100, 1, "a6617c")
-+AVR_MCU ("ata664251",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA664251__",        0x0100, 1, "a664251")
-+AVR_MCU ("at90usb82",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB82__",        0x0100, 1, "usb82")
-+AVR_MCU ("at90usb162",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB162__",       0x0100, 1, "usb162")
-+AVR_MCU ("atmega8u2",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega8U2__",        0x0100, 1, "m8u2")
-+AVR_MCU ("atmega16u2",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega16U2__",       0x0100, 1, "m16u2")
-+AVR_MCU ("atmega32u2",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega32U2__",       0x0100, 1, "m32u2")
-+AVR_MCU ("attiny167",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny167__",        0x0100, 1, "tn167")
-+AVR_MCU ("attiny1634",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny1634__",       0x0100, 1, "tn1634")
++AVR_MCU ("avr35",                ARCH_AVR35, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 1, "usb162")
++AVR_MCU ("ata5505",              ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA5505__",          0x0100, 0x0, 1, "a5505")
++AVR_MCU ("ata6617c",             ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA6617C__",         0x0100, 0x0, 1, "a6617c")
++AVR_MCU ("ata664251",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA664251__",        0x0100, 0x0, 1, "a664251")
++AVR_MCU ("at90usb82",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB82__",        0x0100, 0x0, 1, "usb82")
++AVR_MCU ("at90usb162",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB162__",       0x0100, 0x0, 1, "usb162")
++AVR_MCU ("atmega8u2",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega8U2__",        0x0100, 0x0, 1, "m8u2")
++AVR_MCU ("atmega16u2",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega16U2__",       0x0100, 0x0, 1, "m16u2")
++AVR_MCU ("atmega32u2",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega32U2__",       0x0100, 0x0, 1, "m32u2")
++AVR_MCU ("attiny167",            ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny167__",        0x0100, 0x0, 1, "tn167")
++AVR_MCU ("attiny1634",           ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny1634__",       0x0100, 0x0, 1, "tn1634")
 +/* Enhanced, <= 8K + 2-byte PC + { MOVW/LPMX, MUL }.  */
-+AVR_MCU ("avr4",                 ARCH_AVR4, AVR_ISA_NONE, NULL,                        0x0060, 1, "m8")
-+AVR_MCU ("ata6285",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6285__",           0x0100, 1, "a6285")
-+AVR_MCU ("ata6286",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6286__",           0x0100, 1, "a6286")
-+AVR_MCU ("ata6289",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6289__",           0x0100, 1, "a6289")
-+AVR_MCU ("ata6612c",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6612C__",          0x0100, 1, "a6612c")
-+AVR_MCU ("atmega8",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8__",           0x0060, 1, "m8")
-+AVR_MCU ("atmega8a",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8A__",          0x0060, 1, "m8a")
-+AVR_MCU ("atmega48",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48__",          0x0100, 1, "m48")
-+AVR_MCU ("atmega48a",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48A__",         0x0100, 1, "m48a")
-+AVR_MCU ("atmega48p",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48P__",         0x0100, 1, "m48p")
-+AVR_MCU ("atmega48pa",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48PA__",        0x0100, 1, "m48pa")
-+AVR_MCU ("atmega88",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88__",          0x0100, 1, "m88")
-+AVR_MCU ("atmega88a",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88A__",         0x0100, 1, "m88a")
-+AVR_MCU ("atmega88p",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88P__",         0x0100, 1, "m88p")
-+AVR_MCU ("atmega88pa",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88PA__",        0x0100, 1, "m88pa")
-+AVR_MCU ("atmega8515",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8515__",        0x0060, 1, "m8515")
-+AVR_MCU ("atmega8535",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8535__",        0x0060, 1, "m8535")
-+AVR_MCU ("atmega8hva",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8HVA__",        0x0100, 1, "m8hva")
-+AVR_MCU ("at90pwm1",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM1__",          0x0100, 1, "90pwm1")
-+AVR_MCU ("at90pwm2",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM2__",          0x0100, 1, "90pwm2")
-+AVR_MCU ("at90pwm2b",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM2B__",         0x0100, 1, "90pwm2b")
-+AVR_MCU ("at90pwm3",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM3__",          0x0100, 1, "90pwm3")
-+AVR_MCU ("at90pwm3b",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM3B__",         0x0100, 1, "90pwm3b")
-+AVR_MCU ("at90pwm81",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM81__",         0x0100, 1, "90pwm81")
++AVR_MCU ("avr4",                 ARCH_AVR4, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 1, "m8")
++AVR_MCU ("ata6285",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6285__",           0x0100, 0x0, 1, "a6285")
++AVR_MCU ("ata6286",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6286__",           0x0100, 0x0, 1, "a6286")
++AVR_MCU ("ata6289",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6289__",           0x0100, 0x0, 1, "a6289")
++AVR_MCU ("ata6612c",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6612C__",          0x0100, 0x0, 1, "a6612c")
++AVR_MCU ("atmega8",              ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8__",           0x0060, 0x0, 1, "m8")
++AVR_MCU ("atmega8a",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8A__",          0x0060, 0x0, 1, "m8a")
++AVR_MCU ("atmega48",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48__",          0x0100, 0x0, 1, "m48")
++AVR_MCU ("atmega48a",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48A__",         0x0100, 0x0, 1, "m48a")
++AVR_MCU ("atmega48p",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48P__",         0x0100, 0x0, 1, "m48p")
++AVR_MCU ("atmega48pa",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48PA__",        0x0100, 0x0, 1, "m48pa")
++AVR_MCU ("atmega48pb",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega48PB__",        0x0100, 0x0, 1, "m48pb")
++AVR_MCU ("atmega88",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88__",          0x0100, 0x0, 1, "m88")
++AVR_MCU ("atmega88a",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88A__",         0x0100, 0x0, 1, "m88a")
++AVR_MCU ("atmega88p",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88P__",         0x0100, 0x0, 1, "m88p")
++AVR_MCU ("atmega88pa",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88PA__",        0x0100, 0x0, 1, "m88pa")
++AVR_MCU ("atmega88pb",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega88PB__",        0x0100, 0x0, 1, "m88pb")
++AVR_MCU ("atmega8515",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8515__",        0x0060, 0x0, 1, "m8515")
++AVR_MCU ("atmega8535",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8535__",        0x0060, 0x0, 1, "m8535")
++AVR_MCU ("atmega8hva",           ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATmega8HVA__",        0x0100, 0x0, 1, "m8hva")
++AVR_MCU ("at90pwm1",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM1__",          0x0100, 0x0, 1, "90pwm1")
++AVR_MCU ("at90pwm2",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM2__",          0x0100, 0x0, 1, "90pwm2")
++AVR_MCU ("at90pwm2b",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM2B__",         0x0100, 0x0, 1, "90pwm2b")
++AVR_MCU ("at90pwm3",             ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM3__",          0x0100, 0x0, 1, "90pwm3")
++AVR_MCU ("at90pwm3b",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM3B__",         0x0100, 0x0, 1, "90pwm3b")
++AVR_MCU ("at90pwm81",            ARCH_AVR4, AVR_ISA_NONE, "__AVR_AT90PWM81__",         0x0100, 0x0, 1, "90pwm81")
 +/* Enhanced, > 8K, <= 64K + 2-byte PC + { MOVW/LPMX, JMP/CALL, MUL }.  */
-+AVR_MCU ("avr5",                 ARCH_AVR5, AVR_ISA_NONE, NULL,                        0x0060, 1, "m16")
-+AVR_MCU ("ata5702m322",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5702M322__",       0x0200, 1, "a5702m322")
-+AVR_MCU ("ata5790",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790__",           0x0100, 1, "a5790")
-+AVR_MCU ("ata5790n",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790N__",          0x0100, 1, "a5790n")
-+AVR_MCU ("ata5795",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5795__",           0x0100, 1, "a5795")
-+AVR_MCU ("ata6613c",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6613C__",          0x0100, 1, "a6613c")
-+AVR_MCU ("ata6614q",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6614Q__",          0x0100, 1, "a6614q")
-+AVR_MCU ("atmega16",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16__",          0x0060, 1, "m16")
-+AVR_MCU ("atmega16a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16A__",         0x0060, 1, "m16a")
-+AVR_MCU ("atmega161",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega161__",         0x0060, 1, "m161")
-+AVR_MCU ("atmega162",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega162__",         0x0100, 1, "m162")
-+AVR_MCU ("atmega163",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega163__",         0x0060, 1, "m163")
-+AVR_MCU ("atmega164a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164A__",        0x0100, 1, "m164a")
-+AVR_MCU ("atmega164p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164P__",        0x0100, 1, "m164p")
-+AVR_MCU ("atmega164pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164PA__",       0x0100, 1, "m164pa")
-+AVR_MCU ("atmega165",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165__",         0x0100, 1, "m165")
-+AVR_MCU ("atmega165a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165A__",        0x0100, 1, "m165a")
-+AVR_MCU ("atmega165p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165P__",        0x0100, 1, "m165p")
-+AVR_MCU ("atmega165pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165PA__",       0x0100, 1, "m165pa")
-+AVR_MCU ("atmega168",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168__",         0x0100, 1, "m168")
-+AVR_MCU ("atmega168a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168A__",        0x0100, 1, "m168a")
-+AVR_MCU ("atmega168p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168P__",        0x0100, 1, "m168p")
-+AVR_MCU ("atmega168pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PA__",       0x0100, 1, "m168pa")
-+AVR_MCU ("atmega169",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169__",         0x0100, 1, "m169")
-+AVR_MCU ("atmega169a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169A__",        0x0100, 1, "m169a")
-+AVR_MCU ("atmega169p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169P__",        0x0100, 1, "m169p")
-+AVR_MCU ("atmega169pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169PA__",       0x0100, 1, "m169pa")
-+AVR_MCU ("atmega16hvb",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVB__",       0x0100, 1, "m16hvb")
-+AVR_MCU ("atmega16hvbrevb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVBrevB__",   0x0100, 1, "m16hvbrevb")
-+AVR_MCU ("atmega16m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16M1__",        0x0100, 1, "m16m1")
-+AVR_MCU ("atmega16u4",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16U4__",        0x0100, 1, "m16u4")
-+AVR_MCU ("atmega32a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32A__",         0x0060, 1, "m32a")
-+AVR_MCU ("atmega32",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32__",          0x0060, 1, "m32")
-+AVR_MCU ("atmega323",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega323__",         0x0060, 1, "m323")
-+AVR_MCU ("atmega324a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324A__",        0x0100, 1, "m324a")
-+AVR_MCU ("atmega324p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324P__",        0x0100, 1, "m324p")
-+AVR_MCU ("atmega324pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324PA__",       0x0100, 1, "m324pa")
-+AVR_MCU ("atmega325",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325__",         0x0100, 1, "m325")
-+AVR_MCU ("atmega325a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325A__",        0x0100, 1, "m325a")
-+AVR_MCU ("atmega325p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325P__",        0x0100, 1, "m325p")
-+AVR_MCU ("atmega325pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325PA__",       0x0100, 1, "m325pa")
-+AVR_MCU ("atmega3250",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250__",        0x0100, 1, "m3250")
-+AVR_MCU ("atmega3250a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250A__",       0x0100, 1, "m3250a")
-+AVR_MCU ("atmega3250p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250P__",       0x0100, 1, "m3250p")
-+AVR_MCU ("atmega3250pa",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250PA__",      0x0100, 1, "m3250pa")
-+AVR_MCU ("atmega328",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328__",         0x0100, 1, "m328")
-+AVR_MCU ("atmega328p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328P__",        0x0100, 1, "m328p")
-+AVR_MCU ("atmega329",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329__",         0x0100, 1, "m329")
-+AVR_MCU ("atmega329a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329A__",        0x0100, 1, "m329a")
-+AVR_MCU ("atmega329p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329P__",        0x0100, 1, "m329p")
-+AVR_MCU ("atmega329pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329PA__",       0x0100, 1, "m329pa")
-+AVR_MCU ("atmega3290",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290__",        0x0100, 1, "m3290")
-+AVR_MCU ("atmega3290a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290A__",       0x0100, 1, "m3290a")
-+AVR_MCU ("atmega3290p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290P__",       0x0100, 1, "m3290p")
-+AVR_MCU ("atmega3290pa",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290PA__",      0x0100, 1, "m3290pa")
-+AVR_MCU ("atmega32c1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32C1__",        0x0100, 1, "m32c1")
-+AVR_MCU ("atmega32m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32M1__",        0x0100, 1, "m32m1")
-+AVR_MCU ("atmega32u4",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U4__",        0x0100, 1, "m32u4")
-+AVR_MCU ("atmega32u6",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U6__",        0x0100, 1, "m32u6")
-+AVR_MCU ("atmega406",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega406__",         0x0100, 1, "m406")
-+AVR_MCU ("atmega64",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64__",          0x0100, 1, "m64")
-+AVR_MCU ("atmega64a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64A__",         0x0100, 1, "m64a")
-+AVR_MCU ("atmega640",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega640__",         0x0200, 1, "m640")
-+AVR_MCU ("atmega644",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644__",         0x0100, 1, "m644")
-+AVR_MCU ("atmega644a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644A__",        0x0100, 1, "m644a")
-+AVR_MCU ("atmega644p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644P__",        0x0100, 1, "m644p")
-+AVR_MCU ("atmega644pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644PA__",       0x0100, 1, "m644pa")
-+AVR_MCU ("atmega645",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645__",         0x0100, 1, "m645")
-+AVR_MCU ("atmega645a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645A__",        0x0100, 1, "m645a")
-+AVR_MCU ("atmega645p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645P__",        0x0100, 1, "m645p")
-+AVR_MCU ("atmega6450",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450__",        0x0100, 1, "m6450")
-+AVR_MCU ("atmega6450a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450A__",       0x0100, 1, "m6450a")
-+AVR_MCU ("atmega6450p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450P__",       0x0100, 1, "m6450p")
-+AVR_MCU ("atmega649",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649__",         0x0100, 1, "m649")
-+AVR_MCU ("atmega649a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649A__",        0x0100, 1, "m649a")
-+AVR_MCU ("atmega649p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649P__",        0x0100, 1, "m649p")
-+AVR_MCU ("atmega6490",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490__",        0x0100, 1, "m6490")
-+AVR_MCU ("atmega16hva",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA__",       0x0100, 1, "m16hva")
-+AVR_MCU ("atmega16hva2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA2__",      0x0100, 1, "m16hva2")
-+AVR_MCU ("atmega32hvb",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVB__",       0x0100, 1, "m32hvb")
-+AVR_MCU ("atmega6490a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490A__",       0x0100, 1, "m6490a")
-+AVR_MCU ("atmega6490p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490P__",       0x0100, 1, "m6490p")
-+AVR_MCU ("atmega64c1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64C1__",        0x0100, 1, "m64c1")
-+AVR_MCU ("atmega64m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64M1__",        0x0100, 1, "m64m1")
-+AVR_MCU ("atmega64hve",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE__",       0x0100, 1, "m64hve")
-+AVR_MCU ("atmega64hve2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE2__",      0x0100, 1, "m64hve2")
-+AVR_MCU ("atmega64rfr2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64RFR2__",      0x0200, 1, "m64rfr2")
-+AVR_MCU ("atmega644rfr2",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644RFR2__",     0x0200, 1, "m644rfr2")
-+AVR_MCU ("atmega32hvbrevb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVBrevB__",   0x0100, 1, "m32hvbrevb")
-+AVR_MCU ("at90can32",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN32__",         0x0100, 1, "can32")
-+AVR_MCU ("at90can64",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN64__",         0x0100, 1, "can64")
-+AVR_MCU ("at90pwm161",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM161__",        0x0100, 1, "90pwm161")
-+AVR_MCU ("at90pwm216",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM216__",        0x0100, 1, "90pwm216")
-+AVR_MCU ("at90pwm316",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM316__",        0x0100, 1, "90pwm316")
-+AVR_MCU ("at90scr100",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90SCR100__",        0x0100, 1, "90scr100")
-+AVR_MCU ("at90usb646",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB646__",        0x0100, 1, "usb646")
-+AVR_MCU ("at90usb647",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB647__",        0x0100, 1, "usb647")
-+AVR_MCU ("at94k",                ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT94K__",             0x0060, 1, "at94k")
-+AVR_MCU ("m3000",                ARCH_AVR5, AVR_ISA_NONE, "__AVR_M3000__",             0x1000, 1, "m3000")
++AVR_MCU ("avr5",                 ARCH_AVR5, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 1, "m16")
++AVR_MCU ("ata5702m322",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5702M322__",       0x0200, 0x0, 1, "a5702m322")
++AVR_MCU ("ata5782",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5782__",           0x0200, 0x8000, 1, "a5782")
++AVR_MCU ("ata5790",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790__",           0x0100, 0x0, 1, "a5790")
++AVR_MCU ("ata5790n",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790N__",          0x0100, 0x0, 1, "a5790n")
++AVR_MCU ("ata5795",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5795__",           0x0100, 0x0, 1, "a5795")
++AVR_MCU ("ata5831",              ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5831__",           0x0200, 0x8000, 1, "a5831")
++AVR_MCU ("ata6613c",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6613C__",          0x0100, 0x0, 1, "a6613c")
++AVR_MCU ("ata6614q",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6614Q__",          0x0100, 0x0, 1, "a6614q")
++AVR_MCU ("atmega16",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16__",          0x0060, 0x0, 1, "m16")
++AVR_MCU ("atmega16a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16A__",         0x0060, 0x0, 1, "m16a")
++AVR_MCU ("atmega161",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega161__",         0x0060, 0x0, 1, "m161")
++AVR_MCU ("atmega162",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega162__",         0x0100, 0x0, 1, "m162")
++AVR_MCU ("atmega163",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega163__",         0x0060, 0x0, 1, "m163")
++AVR_MCU ("atmega164a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164A__",        0x0100, 0x0, 1, "m164a")
++AVR_MCU ("atmega164p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164P__",        0x0100, 0x0, 1, "m164p")
++AVR_MCU ("atmega164pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164PA__",       0x0100, 0x0, 1, "m164pa")
++AVR_MCU ("atmega165",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165__",         0x0100, 0x0, 1, "m165")
++AVR_MCU ("atmega165a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165A__",        0x0100, 0x0, 1, "m165a")
++AVR_MCU ("atmega165p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165P__",        0x0100, 0x0, 1, "m165p")
++AVR_MCU ("atmega165pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165PA__",       0x0100, 0x0, 1, "m165pa")
++AVR_MCU ("atmega168",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168__",         0x0100, 0x0, 1, "m168")
++AVR_MCU ("atmega168a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168A__",        0x0100, 0x0, 1, "m168a")
++AVR_MCU ("atmega168p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168P__",        0x0100, 0x0, 1, "m168p")
++AVR_MCU ("atmega168pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PA__",       0x0100, 0x0, 1, "m168pa")
++AVR_MCU ("atmega168pb",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PB__",       0x0100, 0x0, 1, "m168pb")
++AVR_MCU ("atmega169",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169__",         0x0100, 0x0, 1, "m169")
++AVR_MCU ("atmega169a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169A__",        0x0100, 0x0, 1, "m169a")
++AVR_MCU ("atmega169p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169P__",        0x0100, 0x0, 1, "m169p")
++AVR_MCU ("atmega169pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169PA__",       0x0100, 0x0, 1, "m169pa")
++AVR_MCU ("atmega16hvb",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVB__",       0x0100, 0x0, 1, "m16hvb")
++AVR_MCU ("atmega16hvbrevb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVBREVB__",   0x0100, 0x0, 1, "m16hvbrevb")
++AVR_MCU ("atmega16m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16M1__",        0x0100, 0x0, 1, "m16m1")
++AVR_MCU ("atmega16u4",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16U4__",        0x0100, 0x0, 1, "m16u4")
++AVR_MCU ("atmega32a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32A__",         0x0060, 0x0, 1, "m32a")
++AVR_MCU ("atmega32",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32__",          0x0060, 0x0, 1, "m32")
++AVR_MCU ("atmega323",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega323__",         0x0060, 0x0, 1, "m323")
++AVR_MCU ("atmega324a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324A__",        0x0100, 0x0, 1, "m324a")
++AVR_MCU ("atmega324p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324P__",        0x0100, 0x0, 1, "m324p")
++AVR_MCU ("atmega324pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324PA__",       0x0100, 0x0, 1, "m324pa")
++AVR_MCU ("atmega325",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325__",         0x0100, 0x0, 1, "m325")
++AVR_MCU ("atmega325a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325A__",        0x0100, 0x0, 1, "m325a")
++AVR_MCU ("atmega325p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325P__",        0x0100, 0x0, 1, "m325p")
++AVR_MCU ("atmega325pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325PA__",       0x0100, 0x0, 1, "m325pa")
++AVR_MCU ("atmega3250",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250__",        0x0100, 0x0, 1, "m3250")
++AVR_MCU ("atmega3250a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250A__",       0x0100, 0x0, 1, "m3250a")
++AVR_MCU ("atmega3250p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250P__",       0x0100, 0x0, 1, "m3250p")
++AVR_MCU ("atmega3250pa",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250PA__",      0x0100, 0x0, 1, "m3250pa")
++AVR_MCU ("atmega328",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328__",         0x0100, 0x0, 1, "m328")
++AVR_MCU ("atmega328p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328P__",        0x0100, 0x0, 1, "m328p")
++AVR_MCU ("atmega329",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329__",         0x0100, 0x0, 1, "m329")
++AVR_MCU ("atmega329a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329A__",        0x0100, 0x0, 1, "m329a")
++AVR_MCU ("atmega329p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329P__",        0x0100, 0x0, 1, "m329p")
++AVR_MCU ("atmega329pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329PA__",       0x0100, 0x0, 1, "m329pa")
++AVR_MCU ("atmega3290",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290__",        0x0100, 0x0, 1, "m3290")
++AVR_MCU ("atmega3290a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290A__",       0x0100, 0x0, 1, "m3290a")
++AVR_MCU ("atmega3290p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290P__",       0x0100, 0x0, 1, "m3290p")
++AVR_MCU ("atmega3290pa",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290PA__",      0x0100, 0x0, 1, "m3290pa")
++AVR_MCU ("atmega32c1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32C1__",        0x0100, 0x0, 1, "m32c1")
++AVR_MCU ("atmega32m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32M1__",        0x0100, 0x0, 1, "m32m1")
++AVR_MCU ("atmega32u4",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U4__",        0x0100, 0x0, 1, "m32u4")
++AVR_MCU ("atmega32u6",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U6__",        0x0100, 0x0, 1, "m32u6")
++AVR_MCU ("atmega406",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega406__",         0x0100, 0x0, 1, "m406")
++AVR_MCU ("atmega64",             ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64__",          0x0100, 0x0, 1, "m64")
++AVR_MCU ("atmega64a",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64A__",         0x0100, 0x0, 1, "m64a")
++AVR_MCU ("atmega640",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega640__",         0x0200, 0x0, 1, "m640")
++AVR_MCU ("atmega644",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644__",         0x0100, 0x0, 1, "m644")
++AVR_MCU ("atmega644a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644A__",        0x0100, 0x0, 1, "m644a")
++AVR_MCU ("atmega644p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644P__",        0x0100, 0x0, 1, "m644p")
++AVR_MCU ("atmega644pa",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644PA__",       0x0100, 0x0, 1, "m644pa")
++AVR_MCU ("atmega645",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645__",         0x0100, 0x0, 1, "m645")
++AVR_MCU ("atmega645a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645A__",        0x0100, 0x0, 1, "m645a")
++AVR_MCU ("atmega645p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645P__",        0x0100, 0x0, 1, "m645p")
++AVR_MCU ("atmega6450",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450__",        0x0100, 0x0, 1, "m6450")
++AVR_MCU ("atmega6450a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450A__",       0x0100, 0x0, 1, "m6450a")
++AVR_MCU ("atmega6450p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450P__",       0x0100, 0x0, 1, "m6450p")
++AVR_MCU ("atmega649",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649__",         0x0100, 0x0, 1, "m649")
++AVR_MCU ("atmega649a",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649A__",        0x0100, 0x0, 1, "m649a")
++AVR_MCU ("atmega649p",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649P__",        0x0100, 0x0, 1, "m649p")
++AVR_MCU ("atmega6490",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490__",        0x0100, 0x0, 1, "m6490")
++AVR_MCU ("atmega16hva",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA__",       0x0100, 0x0, 1, "m16hva")
++AVR_MCU ("atmega16hva2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA2__",      0x0100, 0x0, 1, "m16hva2")
++AVR_MCU ("atmega32hvb",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVB__",       0x0100, 0x0, 1, "m32hvb")
++AVR_MCU ("atmega6490a",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490A__",       0x0100, 0x0, 1, "m6490a")
++AVR_MCU ("atmega6490p",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490P__",       0x0100, 0x0, 1, "m6490p")
++AVR_MCU ("atmega64c1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64C1__",        0x0100, 0x0, 1, "m64c1")
++AVR_MCU ("atmega64m1",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64M1__",        0x0100, 0x0, 1, "m64m1")
++AVR_MCU ("atmega64hve",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE__",       0x0100, 0x0, 1, "m64hve")
++AVR_MCU ("atmega64hve2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE2__",      0x0100, 0x0, 1, "m64hve2")
++AVR_MCU ("atmega64rfr2",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64RFR2__",      0x0200, 0x0, 1, "m64rfr2")
++AVR_MCU ("atmega644rfr2",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644RFR2__",     0x0200, 0x0, 1, "m644rfr2")
++AVR_MCU ("atmega32hvbrevb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVBREVB__",   0x0100, 0x0, 1, "m32hvbrevb")
++AVR_MCU ("at90can32",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN32__",         0x0100, 0x0, 1, "can32")
++AVR_MCU ("at90can64",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN64__",         0x0100, 0x0, 1, "can64")
++AVR_MCU ("at90pwm161",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM161__",        0x0100, 0x0, 1, "90pwm161")
++AVR_MCU ("at90pwm216",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM216__",        0x0100, 0x0, 1, "90pwm216")
++AVR_MCU ("at90pwm316",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM316__",        0x0100, 0x0, 1, "90pwm316")
++AVR_MCU ("at90scr100",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90SCR100__",        0x0100, 0x0, 1, "90scr100")
++AVR_MCU ("at90usb646",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB646__",        0x0100, 0x0, 1, "usb646")
++AVR_MCU ("at90usb647",           ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB647__",        0x0100, 0x0, 1, "usb647")
++AVR_MCU ("at94k",                ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT94K__",             0x0060, 0x0, 1, "at94k")
++AVR_MCU ("m3000",                ARCH_AVR5, AVR_ISA_NONE, "__AVR_M3000__",             0x1000, 0x0, 1, "m3000")
 +/* Enhanced, == 128K + 2-byte PC + { MOVW/LPMX, JMP/CALL, MUL, ELPM, ELPMX }.  */
-+AVR_MCU ("avr51",                ARCH_AVR51, AVR_ISA_NONE, NULL,                       0x0100, 2, "m128")
-+AVR_MCU ("atmega128",            ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128__",        0x0100, 2, "m128")
-+AVR_MCU ("atmega128a",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128A__",       0x0100, 2, "m128a")
-+AVR_MCU ("atmega1280",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1280__",       0x0200, 2, "m1280")
-+AVR_MCU ("atmega1281",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1281__",       0x0200, 2, "m1281")
-+AVR_MCU ("atmega1284",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284__",       0x0100, 2, "m1284")
-+AVR_MCU ("atmega1284p",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284P__",      0x0100, 2, "m1284p")
-+AVR_MCU ("atmega128rfa1",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFA1__",    0x0200, 2, "m128rfa1")
-+AVR_MCU ("atmega128rfr2",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFR2__",    0x0200, 2, "m128rfr2")
-+AVR_MCU ("atmega1284rfr2",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284RFR2__",   0x0200, 2, "m1284rfr2")
-+AVR_MCU ("at90can128",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90CAN128__",       0x0100, 2, "can128")
-+AVR_MCU ("at90usb1286",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1286__",      0x0100, 2, "usb1286")
-+AVR_MCU ("at90usb1287",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1287__",      0x0100, 2, "usb1287")
++AVR_MCU ("avr51",                ARCH_AVR51, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 2, "m128")
++AVR_MCU ("atmega128",            ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128__",        0x0100, 0x0, 2, "m128")
++AVR_MCU ("atmega128a",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128A__",       0x0100, 0x0, 2, "m128a")
++AVR_MCU ("atmega1280",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1280__",       0x0200, 0x0, 2, "m1280")
++AVR_MCU ("atmega1281",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1281__",       0x0200, 0x0, 2, "m1281")
++AVR_MCU ("atmega1284",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284__",       0x0100, 0x0, 2, "m1284")
++AVR_MCU ("atmega1284p",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284P__",      0x0100, 0x0, 2, "m1284p")
++AVR_MCU ("atmega128rfa1",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFA1__",    0x0200, 0x0, 2, "m128rfa1")
++AVR_MCU ("atmega128rfr2",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFR2__",    0x0200, 0x0, 2, "m128rfr2")
++AVR_MCU ("atmega1284rfr2",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284RFR2__",   0x0200, 0x0, 2, "m1284rfr2")
++AVR_MCU ("at90can128",           ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90CAN128__",       0x0100, 0x0, 2, "can128")
++AVR_MCU ("at90usb1286",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1286__",      0x0100, 0x0, 2, "usb1286")
++AVR_MCU ("at90usb1287",          ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1287__",      0x0100, 0x0, 2, "usb1287")
 +/* Enhanced, == 256K + 3-Byte PC + { MOVW/LPMX, JMP/CALL, MUL, ELPM, ELPMX }.  */
-+AVR_MCU ("avr6",                 ARCH_AVR6, AVR_ISA_NONE, NULL,                        0x0200, 4, "m2561")
-+AVR_MCU ("atmega2560",           ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2560__",        0x0200, 4, "m2560")
-+AVR_MCU ("atmega2561",           ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2561__",        0x0200, 4, "m2561")
-+AVR_MCU ("atmega256rfr2",        ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega256RFR2__",     0x0200, 4, "m256rfr2")
-+AVR_MCU ("atmega2564rfr2",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2564RFR2__",    0x0200, 4, "m2564rfr2")
-+/* Enhanced, == 20K starts at 0x8000 */
-+AVR_MCU ("avr7",                 ARCH_AVR7, AVR_ISA_NONE, NULL,                        0x0200, 1, "a5831")
-+AVR_MCU ("ata5782",              ARCH_AVR7, AVR_ISA_NONE, "__AVR_ATA5782__",           0x0200, 1, "a5782")
-+AVR_MCU ("ata5831",              ARCH_AVR7, AVR_ISA_NONE, "__AVR_ATA5831__",           0x0200, 1, "a5831")
++AVR_MCU ("avr6",                 ARCH_AVR6, AVR_ISA_NONE, NULL,                        0x0200, 0x0, 4, "m2561")
++AVR_MCU ("atmega2560",           ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2560__",        0x0200, 0x0, 4, "m2560")
++AVR_MCU ("atmega2561",           ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2561__",        0x0200, 0x0, 4, "m2561")
++AVR_MCU ("atmega256rfr2",        ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega256RFR2__",     0x0200, 0x0, 4, "m256rfr2")
++AVR_MCU ("atmega2564rfr2",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2564RFR2__",    0x0200, 0x0, 4, "m2564rfr2")
  /* Xmega, 16K <= Flash < 64K, RAM <= 64K */
 -AVR_MCU ("avrxmega2",        ARCH_AVRXMEGA2, NULL,                       0, 0, 0x2000, 1, "x32a4")
 -AVR_MCU ("atxmega16a4",      ARCH_AVRXMEGA2, "__AVR_ATxmega16A4__",      0, 0, 0x2000, 1, "x16a4")
@@ -1405,20 +1443,20 @@ index 2a730ac..5797b9c 100644
 -AVR_MCU ("atxmega32a4u",     ARCH_AVRXMEGA2, "__AVR_ATxmega32A4U__",     0, 0, 0x2000, 1, "x32a4u")
 -AVR_MCU ("atxmega32c4",      ARCH_AVRXMEGA2, "__AVR_ATxmega32C4__",      0, 0, 0x2000, 1, "x32c4")
 -AVR_MCU ("atxmega32e5",      ARCH_AVRXMEGA2, "__AVR_ATxmega32E5__",      0, 0, 0x2000, 1, "x32e5")
-+AVR_MCU ("avrxmega2",        ARCH_AVRXMEGA2, AVR_ISA_NONE, NULL,                       0x2000, 1, "x32a4")
-+AVR_MCU ("atxmega8e5",       ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega8E5__",       0x2000, 1, "x8e5")
-+AVR_MCU ("atxmega16a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16A4__",      0x2000, 1, "x16a4")
-+AVR_MCU ("atxmega16a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16A4U__",     0x2000, 1, "x16a4u")
-+AVR_MCU ("atxmega16c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16C4__",      0x2000, 1, "x16c4")
-+AVR_MCU ("atxmega16d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16D4__",      0x2000, 1, "x16d4")
-+AVR_MCU ("atxmega16e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16E5__",      0x2000, 1, "x16e5")
-+AVR_MCU ("atxmega32a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32A4__",      0x2000, 1, "x32a4")
-+AVR_MCU ("atxmega32a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32A4U__",     0x2000, 1, "x32a4u")
-+AVR_MCU ("atxmega32c3",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C3__",      0x2000, 1, "x32c3")
-+AVR_MCU ("atxmega32c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C4__",      0x2000, 1, "x32c4")
-+AVR_MCU ("atxmega32d3",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D3__",      0x2000, 1, "x32d3")
-+AVR_MCU ("atxmega32d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D4__",      0x2000, 1, "x32d4")
-+AVR_MCU ("atxmega32e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32E5__",      0x2000, 1, "x32e5")
++AVR_MCU ("avrxmega2",        ARCH_AVRXMEGA2, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 1, "x32a4")
++AVR_MCU ("atxmega8e5",       ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega8E5__",       0x2000, 0x0, 1, "x8e5")
++AVR_MCU ("atxmega16a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16A4__",      0x2000, 0x0, 1, "x16a4")
++AVR_MCU ("atxmega16a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16A4U__",     0x2000, 0x0, 1, "x16a4u")
++AVR_MCU ("atxmega16c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16C4__",      0x2000, 0x0, 1, "x16c4")
++AVR_MCU ("atxmega16d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16D4__",      0x2000, 0x0, 1, "x16d4")
++AVR_MCU ("atxmega16e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16E5__",      0x2000, 0x0, 1, "x16e5")
++AVR_MCU ("atxmega32a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32A4__",      0x2000, 0x0, 1, "x32a4")
++AVR_MCU ("atxmega32a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32A4U__",     0x2000, 0x0, 1, "x32a4u")
++AVR_MCU ("atxmega32c3",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C3__",      0x2000, 0x0, 1, "x32c3")
++AVR_MCU ("atxmega32c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C4__",      0x2000, 0x0, 1, "x32c4")
++AVR_MCU ("atxmega32d3",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D3__",      0x2000, 0x0, 1, "x32d3")
++AVR_MCU ("atxmega32d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D4__",      0x2000, 0x0, 1, "x32d4")
++AVR_MCU ("atxmega32e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32E5__",      0x2000, 0x0, 1, "x32e5")
  /* Xmega, 64K < Flash <= 128K, RAM <= 64K */
 -AVR_MCU ("avrxmega4",        ARCH_AVRXMEGA4, NULL,                       0, 0, 0x2000, 2, "x64a4")
 -AVR_MCU ("atxmega64a3",      ARCH_AVRXMEGA4, "__AVR_ATxmega64A3__",      0, 0, 0x2000, 2, "x64a3")
@@ -1429,22 +1467,22 @@ index 2a730ac..5797b9c 100644
 -AVR_MCU ("atxmega64b3",      ARCH_AVRXMEGA4, "__AVR_ATxmega64B3__",      0, 0, 0x2000, 2, "x64b3")
 -AVR_MCU ("atxmega64c3",      ARCH_AVRXMEGA4, "__AVR_ATxmega64C3__",      0, 0, 0x2000, 2, "x64c3")
 -AVR_MCU ("atxmega64d4",      ARCH_AVRXMEGA4, "__AVR_ATxmega64D4__",      0, 0, 0x2000, 2, "x64d4")
-+AVR_MCU ("avrxmega4",        ARCH_AVRXMEGA4, AVR_ISA_NONE, NULL,                       0x2000, 2, "x64a4")
-+AVR_MCU ("atxmega64a3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64A3__",      0x2000, 2, "x64a3")
-+AVR_MCU ("atxmega64a3u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A3U__",     0x2000, 2, "x64a3u")
-+AVR_MCU ("atxmega64a4u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A4U__",     0x2000, 2, "x64a4u")
-+AVR_MCU ("atxmega64b1",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B1__",      0x2000, 2, "x64b1")
-+AVR_MCU ("atxmega64b3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B3__",      0x2000, 2, "x64b3")
-+AVR_MCU ("atxmega64c3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64C3__",      0x2000, 2, "x64c3")
-+AVR_MCU ("atxmega64d3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D3__",      0x2000, 2, "x64d3")
-+AVR_MCU ("atxmega64d4",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D4__",      0x2000, 2, "x64d4")
++AVR_MCU ("avrxmega4",        ARCH_AVRXMEGA4, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 2, "x64a4")
++AVR_MCU ("atxmega64a3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64A3__",      0x2000, 0x0, 2, "x64a3")
++AVR_MCU ("atxmega64a3u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A3U__",     0x2000, 0x0, 2, "x64a3u")
++AVR_MCU ("atxmega64a4u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A4U__",     0x2000, 0x0, 2, "x64a4u")
++AVR_MCU ("atxmega64b1",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B1__",      0x2000, 0x0, 2, "x64b1")
++AVR_MCU ("atxmega64b3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B3__",      0x2000, 0x0, 2, "x64b3")
++AVR_MCU ("atxmega64c3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64C3__",      0x2000, 0x0, 2, "x64c3")
++AVR_MCU ("atxmega64d3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D3__",      0x2000, 0x0, 2, "x64d3")
++AVR_MCU ("atxmega64d4",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D4__",      0x2000, 0x0, 2, "x64d4")
  /* Xmega, 64K < Flash <= 128K, RAM > 64K */
 -AVR_MCU ("avrxmega5",        ARCH_AVRXMEGA5, NULL,                       0, 0, 0x2000, 2, "x64a1")
 -AVR_MCU ("atxmega64a1",      ARCH_AVRXMEGA5, "__AVR_ATxmega64A1__",      0, 0, 0x2000, 2, "x64a1")
 -AVR_MCU ("atxmega64a1u",     ARCH_AVRXMEGA5, "__AVR_ATxmega64A1U__",     0, 0, 0x2000, 2, "x64a1u")
-+AVR_MCU ("avrxmega5",        ARCH_AVRXMEGA5, AVR_ISA_NONE, NULL,                       0x2000, 2, "x64a1")
-+AVR_MCU ("atxmega64a1",      ARCH_AVRXMEGA5, AVR_ISA_NONE, "__AVR_ATxmega64A1__",      0x2000, 2, "x64a1")
-+AVR_MCU ("atxmega64a1u",     ARCH_AVRXMEGA5, AVR_ISA_RMW,  "__AVR_ATxmega64A1U__",     0x2000, 2, "x64a1u")
++AVR_MCU ("avrxmega5",        ARCH_AVRXMEGA5, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 2, "x64a1")
++AVR_MCU ("atxmega64a1",      ARCH_AVRXMEGA5, AVR_ISA_NONE, "__AVR_ATxmega64A1__",      0x2000, 0x0, 2, "x64a1")
++AVR_MCU ("atxmega64a1u",     ARCH_AVRXMEGA5, AVR_ISA_RMW,  "__AVR_ATxmega64A1U__",     0x2000, 0x0, 2, "x64a1u")
  /* Xmega, 128K < Flash, RAM <= 64K */
 -AVR_MCU ("avrxmega6",        ARCH_AVRXMEGA6, NULL,                       0, 0, 0x2000, 6, "x128a3")
 -AVR_MCU ("atxmega128a3",     ARCH_AVRXMEGA6, "__AVR_ATxmega128A3__",     0, 0, 0x2000, 3, "x128a3")
@@ -1473,39 +1511,39 @@ index 2a730ac..5797b9c 100644
 -AVR_MCU ("atxmega128a1",     ARCH_AVRXMEGA7, "__AVR_ATxmega128A1__",     0, 0, 0x2000, 3, "x128a1")
 -AVR_MCU ("atxmega128a1u",    ARCH_AVRXMEGA7, "__AVR_ATxmega128A1U__",    0, 0, 0x2000, 3, "x128a1u")
 -AVR_MCU ("atxmega128a4u",    ARCH_AVRXMEGA7, "__AVR_ATxmega128A4U__",    0, 0, 0x2000, 3, "x128a4u")
-+AVR_MCU ("avrxmega6",        ARCH_AVRXMEGA6, AVR_ISA_NONE, NULL,                       0x2000, 6, "x128a3")
-+AVR_MCU ("atxmega128a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128A3__",     0x2000, 3, "x128a3")
-+AVR_MCU ("atxmega128a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128A3U__",    0x2000, 3, "x128a3u")
-+AVR_MCU ("atxmega128b1",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B1__",     0x2000, 3, "x128b1")
-+AVR_MCU ("atxmega128b3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B3__",     0x2000, 3, "x128b3")
-+AVR_MCU ("atxmega128c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128C3__",     0x2000, 3, "x128c3")
-+AVR_MCU ("atxmega128d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D3__",     0x2000, 3, "x128d3")
-+AVR_MCU ("atxmega128d4",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D4__",     0x2000, 3, "x128d4")
-+AVR_MCU ("atxmega192a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192A3__",     0x2000, 4, "x192a3")
-+AVR_MCU ("atxmega192a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192A3U__",    0x2000, 4, "x192a3u")
-+AVR_MCU ("atxmega192c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192C3__",     0x2000, 4, "x192c3")
-+AVR_MCU ("atxmega192d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192D3__",     0x2000, 4, "x192d3")
-+AVR_MCU ("atxmega256a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3__",     0x2000, 5, "x256a3")
-+AVR_MCU ("atxmega256a3b",    ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3B__",    0x2000, 5, "x256a3b")
-+AVR_MCU ("atxmega256a3bu",   ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3BU__",   0x2000, 5, "x256a3bu")
-+AVR_MCU ("atxmega256a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3U__",    0x2000, 5, "x256a3u")
-+AVR_MCU ("atxmega256c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256C3__",     0x2000, 5, "x256c3")
-+AVR_MCU ("atxmega256d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256D3__",     0x2000, 5, "x256d3")
-+AVR_MCU ("atxmega384c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega384C3__",     0x2000, 6, "x384c3")
-+AVR_MCU ("atxmega384d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega384D3__",     0x2000, 6, "x384d3")
++AVR_MCU ("avrxmega6",        ARCH_AVRXMEGA6, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 6, "x128a3")
++AVR_MCU ("atxmega128a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128A3__",     0x2000, 0x0, 3, "x128a3")
++AVR_MCU ("atxmega128a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128A3U__",    0x2000, 0x0, 3, "x128a3u")
++AVR_MCU ("atxmega128b1",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B1__",     0x2000, 0x0, 3, "x128b1")
++AVR_MCU ("atxmega128b3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B3__",     0x2000, 0x0, 3, "x128b3")
++AVR_MCU ("atxmega128c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128C3__",     0x2000, 0x0, 3, "x128c3")
++AVR_MCU ("atxmega128d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D3__",     0x2000, 0x0, 3, "x128d3")
++AVR_MCU ("atxmega128d4",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D4__",     0x2000, 0x0, 3, "x128d4")
++AVR_MCU ("atxmega192a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192A3__",     0x2000, 0x0, 4, "x192a3")
++AVR_MCU ("atxmega192a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192A3U__",    0x2000, 0x0, 4, "x192a3u")
++AVR_MCU ("atxmega192c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192C3__",     0x2000, 0x0, 4, "x192c3")
++AVR_MCU ("atxmega192d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192D3__",     0x2000, 0x0, 4, "x192d3")
++AVR_MCU ("atxmega256a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3__",     0x2000, 0x0, 5, "x256a3")
++AVR_MCU ("atxmega256a3b",    ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3B__",    0x2000, 0x0, 5, "x256a3b")
++AVR_MCU ("atxmega256a3bu",   ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3BU__",   0x2000, 0x0, 5, "x256a3bu")
++AVR_MCU ("atxmega256a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3U__",    0x2000, 0x0, 5, "x256a3u")
++AVR_MCU ("atxmega256c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256C3__",     0x2000, 0x0, 5, "x256c3")
++AVR_MCU ("atxmega256d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256D3__",     0x2000, 0x0, 5, "x256d3")
++AVR_MCU ("atxmega384c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega384C3__",     0x2000, 0x0, 6, "x384c3")
++AVR_MCU ("atxmega384d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega384D3__",     0x2000, 0x0, 6, "x384d3")
 +/* Xmega, >= 128K, <= 256K FLASH, > 64K RAM.  */
-+AVR_MCU ("avrxmega7",        ARCH_AVRXMEGA7, AVR_ISA_NONE, NULL,                       0x2000, 3, "x128a1")
-+AVR_MCU ("atxmega128a1",     ARCH_AVRXMEGA7, AVR_ISA_NONE, "__AVR_ATxmega128A1__",     0x2000, 3, "x128a1")
-+AVR_MCU ("atxmega128a1u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A1U__",    0x2000, 3, "x128a1u")
-+AVR_MCU ("atxmega128a4u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A4U__",    0x2000, 3, "x128a4u")
++AVR_MCU ("avrxmega7",        ARCH_AVRXMEGA7, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 3, "x128a1")
++AVR_MCU ("atxmega128a1",     ARCH_AVRXMEGA7, AVR_ISA_NONE, "__AVR_ATxmega128A1__",     0x2000, 0x0, 3, "x128a1")
++AVR_MCU ("atxmega128a1u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A1U__",    0x2000, 0x0, 3, "x128a1u")
++AVR_MCU ("atxmega128a4u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A4U__",    0x2000, 0x0, 3, "x128a4u")
 +/* Tiny family */
-+AVR_MCU ("avrtiny",          ARCH_AVRTINY, AVR_ISA_NONE,   NULL,                       0x0040, 1, "tn10")
-+AVR_MCU ("attiny4",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny4__",          0x0040, 1, "tn4")
-+AVR_MCU ("attiny5",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny5__",          0x0040, 1, "tn5")
-+AVR_MCU ("attiny9",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny9__",          0x0040, 1, "tn9") 
-+AVR_MCU ("attiny10",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny10__",         0x0040, 1, "tn10")
-+AVR_MCU ("attiny20",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny20__",         0x0040, 1, "tn20")
-+AVR_MCU ("attiny40",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny40__",         0x0040, 1, "tn40")
++AVR_MCU ("avrtiny",          ARCH_AVRTINY, AVR_ISA_NONE,   NULL,                       0x0040, 0x0, 1, "tn10")
++AVR_MCU ("attiny4",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny4__",          0x0040, 0x0, 1, "tn4")
++AVR_MCU ("attiny5",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny5__",          0x0040, 0x0, 1, "tn5")
++AVR_MCU ("attiny9",          ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny9__",          0x0040, 0x0, 1, "tn9") 
++AVR_MCU ("attiny10",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny10__",         0x0040, 0x0, 1, "tn10")
++AVR_MCU ("attiny20",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny20__",         0x0040, 0x0, 1, "tn20")
++AVR_MCU ("attiny40",         ARCH_AVRTINY, AVR_ISA_NONE,   "__AVR_ATtiny40__",         0x0040, 0x0, 1, "tn40")
  /* Assembler only.  */
 -AVR_MCU ("avr1",                 ARCH_AVR1, NULL,                        0, 0, 0x0060, 1, "s1200")
 -AVR_MCU ("at90s1200",            ARCH_AVR1, "__AVR_AT90S1200__",         0, 0, 0x0060, 1, "s1200")
@@ -1513,12 +1551,12 @@ index 2a730ac..5797b9c 100644
 -AVR_MCU ("attiny12",             ARCH_AVR1, "__AVR_ATtiny12__",          0, 0, 0x0060, 1, "tn12")
 -AVR_MCU ("attiny15",             ARCH_AVR1, "__AVR_ATtiny15__",          0, 0, 0x0060, 1, "tn15")
 -AVR_MCU ("attiny28",             ARCH_AVR1, "__AVR_ATtiny28__",          0, 0, 0x0060, 1, "tn28")
-+AVR_MCU ("avr1",                 ARCH_AVR1, AVR_ISA_NONE, NULL,                        0x0060, 1, "s1200")
-+AVR_MCU ("at90s1200",            ARCH_AVR1, AVR_ISA_NONE, "__AVR_AT90S1200__",         0x0060, 1, "s1200")
-+AVR_MCU ("attiny11",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny11__",          0x0060, 1, "tn11")
-+AVR_MCU ("attiny12",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny12__",          0x0060, 1, "tn12")
-+AVR_MCU ("attiny15",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny15__",          0x0060, 1, "tn15")
-+AVR_MCU ("attiny28",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny28__",          0x0060, 1, "tn28")
++AVR_MCU ("avr1",                 ARCH_AVR1, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 1, "s1200")
++AVR_MCU ("at90s1200",            ARCH_AVR1, AVR_ISA_NONE, "__AVR_AT90S1200__",         0x0060, 0x0, 1, "s1200")
++AVR_MCU ("attiny11",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny11__",          0x0060, 0x0, 1, "tn11")
++AVR_MCU ("attiny12",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny12__",          0x0060, 0x0, 1, "tn12")
++AVR_MCU ("attiny15",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny15__",          0x0060, 0x0, 1, "tn15")
++AVR_MCU ("attiny28",             ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny28__",          0x0060, 0x0, 1, "tn28")
 diff --git a/gcc/config/avr/avr-protos.h b/gcc/config/avr/avr-protos.h
 index 5246d06..f788bc9 100644
 --- a/gcc/config/avr/avr-protos.h
@@ -1560,7 +1598,7 @@ index 8e7278f..4137b06 100644
  #define UINT64_TYPE (INT_TYPE_SIZE == 16 ? "long long unsigned int" : 0)
  
 diff --git a/gcc/config/avr/avr-tables.opt b/gcc/config/avr/avr-tables.opt
-index 1a451bd..6ff2cbe 100644
+index 1a451bd..b5aa221 100644
 --- a/gcc/config/avr/avr-tables.opt
 +++ b/gcc/config/avr/avr-tables.opt
 @@ -66,10 +66,10 @@ EnumValue
@@ -1576,7 +1614,7 @@ index 1a451bd..6ff2cbe 100644
  
  EnumValue
  Enum(avr_mcu) String(attiny13) Value(16)
-@@ -99,676 +99,676 @@ EnumValue
+@@ -99,710 +99,737 @@ EnumValue
  Enum(avr_mcu) String(attiny44a) Value(24)
  
  EnumValue
@@ -1769,763 +1807,789 @@ index 1a451bd..6ff2cbe 100644
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm1) Value(72)
-+Enum(avr_mcu) String(atmega88) Value(72)
++Enum(avr_mcu) String(atmega48pb) Value(72)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm2) Value(73)
-+Enum(avr_mcu) String(atmega88a) Value(73)
++Enum(avr_mcu) String(atmega88) Value(73)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm2b) Value(74)
-+Enum(avr_mcu) String(atmega88p) Value(74)
++Enum(avr_mcu) String(atmega88a) Value(74)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm3) Value(75)
-+Enum(avr_mcu) String(atmega88pa) Value(75)
++Enum(avr_mcu) String(atmega88p) Value(75)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm3b) Value(76)
-+Enum(avr_mcu) String(atmega8515) Value(76)
++Enum(avr_mcu) String(atmega88pa) Value(76)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm81) Value(77)
-+Enum(avr_mcu) String(atmega8535) Value(77)
++Enum(avr_mcu) String(atmega88pb) Value(77)
  
  EnumValue
 -Enum(avr_mcu) String(avr5) Value(78)
-+Enum(avr_mcu) String(atmega8hva) Value(78)
++Enum(avr_mcu) String(atmega8515) Value(78)
  
  EnumValue
 -Enum(avr_mcu) String(ata5790) Value(79)
-+Enum(avr_mcu) String(at90pwm1) Value(79)
++Enum(avr_mcu) String(atmega8535) Value(79)
  
  EnumValue
 -Enum(avr_mcu) String(ata5790n) Value(80)
-+Enum(avr_mcu) String(at90pwm2) Value(80)
++Enum(avr_mcu) String(atmega8hva) Value(80)
  
  EnumValue
 -Enum(avr_mcu) String(ata5795) Value(81)
-+Enum(avr_mcu) String(at90pwm2b) Value(81)
++Enum(avr_mcu) String(at90pwm1) Value(81)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16) Value(82)
-+Enum(avr_mcu) String(at90pwm3) Value(82)
++Enum(avr_mcu) String(at90pwm2) Value(82)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16a) Value(83)
-+Enum(avr_mcu) String(at90pwm3b) Value(83)
++Enum(avr_mcu) String(at90pwm2b) Value(83)
  
  EnumValue
 -Enum(avr_mcu) String(atmega161) Value(84)
-+Enum(avr_mcu) String(at90pwm81) Value(84)
++Enum(avr_mcu) String(at90pwm3) Value(84)
  
  EnumValue
 -Enum(avr_mcu) String(atmega162) Value(85)
-+Enum(avr_mcu) String(avr5) Value(85)
++Enum(avr_mcu) String(at90pwm3b) Value(85)
  
  EnumValue
 -Enum(avr_mcu) String(atmega163) Value(86)
-+Enum(avr_mcu) String(ata5702m322) Value(86)
++Enum(avr_mcu) String(at90pwm81) Value(86)
  
  EnumValue
 -Enum(avr_mcu) String(atmega164a) Value(87)
-+Enum(avr_mcu) String(ata5790) Value(87)
++Enum(avr_mcu) String(avr5) Value(87)
  
  EnumValue
 -Enum(avr_mcu) String(atmega164p) Value(88)
-+Enum(avr_mcu) String(ata5790n) Value(88)
++Enum(avr_mcu) String(ata5702m322) Value(88)
  
  EnumValue
 -Enum(avr_mcu) String(atmega164pa) Value(89)
-+Enum(avr_mcu) String(ata5795) Value(89)
++Enum(avr_mcu) String(ata5782) Value(89)
  
  EnumValue
 -Enum(avr_mcu) String(atmega165) Value(90)
-+Enum(avr_mcu) String(ata6613c) Value(90)
++Enum(avr_mcu) String(ata5790) Value(90)
  
  EnumValue
 -Enum(avr_mcu) String(atmega165a) Value(91)
-+Enum(avr_mcu) String(ata6614q) Value(91)
++Enum(avr_mcu) String(ata5790n) Value(91)
  
  EnumValue
 -Enum(avr_mcu) String(atmega165p) Value(92)
-+Enum(avr_mcu) String(atmega16) Value(92)
++Enum(avr_mcu) String(ata5795) Value(92)
  
  EnumValue
 -Enum(avr_mcu) String(atmega165pa) Value(93)
-+Enum(avr_mcu) String(atmega16a) Value(93)
++Enum(avr_mcu) String(ata5831) Value(93)
  
  EnumValue
 -Enum(avr_mcu) String(atmega168) Value(94)
-+Enum(avr_mcu) String(atmega161) Value(94)
++Enum(avr_mcu) String(ata6613c) Value(94)
  
  EnumValue
 -Enum(avr_mcu) String(atmega168a) Value(95)
-+Enum(avr_mcu) String(atmega162) Value(95)
++Enum(avr_mcu) String(ata6614q) Value(95)
  
  EnumValue
 -Enum(avr_mcu) String(atmega168p) Value(96)
-+Enum(avr_mcu) String(atmega163) Value(96)
++Enum(avr_mcu) String(atmega16) Value(96)
  
  EnumValue
 -Enum(avr_mcu) String(atmega168pa) Value(97)
-+Enum(avr_mcu) String(atmega164a) Value(97)
++Enum(avr_mcu) String(atmega16a) Value(97)
  
  EnumValue
 -Enum(avr_mcu) String(atmega169) Value(98)
-+Enum(avr_mcu) String(atmega164p) Value(98)
++Enum(avr_mcu) String(atmega161) Value(98)
  
  EnumValue
 -Enum(avr_mcu) String(atmega169a) Value(99)
-+Enum(avr_mcu) String(atmega164pa) Value(99)
++Enum(avr_mcu) String(atmega162) Value(99)
  
  EnumValue
 -Enum(avr_mcu) String(atmega169p) Value(100)
-+Enum(avr_mcu) String(atmega165) Value(100)
++Enum(avr_mcu) String(atmega163) Value(100)
  
  EnumValue
 -Enum(avr_mcu) String(atmega169pa) Value(101)
-+Enum(avr_mcu) String(atmega165a) Value(101)
++Enum(avr_mcu) String(atmega164a) Value(101)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hva) Value(102)
-+Enum(avr_mcu) String(atmega165p) Value(102)
++Enum(avr_mcu) String(atmega164p) Value(102)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hvb) Value(103)
-+Enum(avr_mcu) String(atmega165pa) Value(103)
++Enum(avr_mcu) String(atmega164pa) Value(103)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hvbrevb) Value(104)
-+Enum(avr_mcu) String(atmega168) Value(104)
++Enum(avr_mcu) String(atmega165) Value(104)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16m1) Value(105)
-+Enum(avr_mcu) String(atmega168a) Value(105)
++Enum(avr_mcu) String(atmega165a) Value(105)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16u4) Value(106)
-+Enum(avr_mcu) String(atmega168p) Value(106)
++Enum(avr_mcu) String(atmega165p) Value(106)
  
  EnumValue
 -Enum(avr_mcu) String(atmega26hvg) Value(107)
-+Enum(avr_mcu) String(atmega168pa) Value(107)
++Enum(avr_mcu) String(atmega165pa) Value(107)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32a) Value(108)
-+Enum(avr_mcu) String(atmega169) Value(108)
++Enum(avr_mcu) String(atmega168) Value(108)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32) Value(109)
-+Enum(avr_mcu) String(atmega169a) Value(109)
++Enum(avr_mcu) String(atmega168a) Value(109)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32a) Value(110)
-+Enum(avr_mcu) String(atmega169p) Value(110)
++Enum(avr_mcu) String(atmega168p) Value(110)
  
  EnumValue
 -Enum(avr_mcu) String(atmega323) Value(111)
-+Enum(avr_mcu) String(atmega169pa) Value(111)
++Enum(avr_mcu) String(atmega168pa) Value(111)
  
  EnumValue
 -Enum(avr_mcu) String(atmega324a) Value(112)
-+Enum(avr_mcu) String(atmega16hvb) Value(112)
++Enum(avr_mcu) String(atmega168pb) Value(112)
  
  EnumValue
 -Enum(avr_mcu) String(atmega324p) Value(113)
-+Enum(avr_mcu) String(atmega16hvbrevb) Value(113)
++Enum(avr_mcu) String(atmega169) Value(113)
  
  EnumValue
 -Enum(avr_mcu) String(atmega324pa) Value(114)
-+Enum(avr_mcu) String(atmega16m1) Value(114)
++Enum(avr_mcu) String(atmega169a) Value(114)
  
  EnumValue
 -Enum(avr_mcu) String(atmega325) Value(115)
-+Enum(avr_mcu) String(atmega16u4) Value(115)
++Enum(avr_mcu) String(atmega169p) Value(115)
  
  EnumValue
 -Enum(avr_mcu) String(atmega325a) Value(116)
-+Enum(avr_mcu) String(atmega32a) Value(116)
++Enum(avr_mcu) String(atmega169pa) Value(116)
  
  EnumValue
 -Enum(avr_mcu) String(atmega325p) Value(117)
-+Enum(avr_mcu) String(atmega32) Value(117)
++Enum(avr_mcu) String(atmega16hvb) Value(117)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3250) Value(118)
-+Enum(avr_mcu) String(atmega323) Value(118)
++Enum(avr_mcu) String(atmega16hvbrevb) Value(118)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3250a) Value(119)
-+Enum(avr_mcu) String(atmega324a) Value(119)
++Enum(avr_mcu) String(atmega16m1) Value(119)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3250p) Value(120)
-+Enum(avr_mcu) String(atmega324p) Value(120)
++Enum(avr_mcu) String(atmega16u4) Value(120)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3250pa) Value(121)
-+Enum(avr_mcu) String(atmega324pa) Value(121)
++Enum(avr_mcu) String(atmega32a) Value(121)
  
  EnumValue
 -Enum(avr_mcu) String(atmega328) Value(122)
-+Enum(avr_mcu) String(atmega325) Value(122)
++Enum(avr_mcu) String(atmega32) Value(122)
  
  EnumValue
 -Enum(avr_mcu) String(atmega328p) Value(123)
-+Enum(avr_mcu) String(atmega325a) Value(123)
++Enum(avr_mcu) String(atmega323) Value(123)
  
  EnumValue
 -Enum(avr_mcu) String(atmega329) Value(124)
-+Enum(avr_mcu) String(atmega325p) Value(124)
++Enum(avr_mcu) String(atmega324a) Value(124)
  
  EnumValue
 -Enum(avr_mcu) String(atmega329a) Value(125)
-+Enum(avr_mcu) String(atmega325pa) Value(125)
++Enum(avr_mcu) String(atmega324p) Value(125)
  
  EnumValue
 -Enum(avr_mcu) String(atmega329p) Value(126)
-+Enum(avr_mcu) String(atmega3250) Value(126)
++Enum(avr_mcu) String(atmega324pa) Value(126)
  
  EnumValue
 -Enum(avr_mcu) String(atmega329pa) Value(127)
-+Enum(avr_mcu) String(atmega3250a) Value(127)
++Enum(avr_mcu) String(atmega325) Value(127)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3290) Value(128)
-+Enum(avr_mcu) String(atmega3250p) Value(128)
++Enum(avr_mcu) String(atmega325a) Value(128)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3290a) Value(129)
-+Enum(avr_mcu) String(atmega3250pa) Value(129)
++Enum(avr_mcu) String(atmega325p) Value(129)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3290p) Value(130)
-+Enum(avr_mcu) String(atmega328) Value(130)
++Enum(avr_mcu) String(atmega325pa) Value(130)
  
  EnumValue
 -Enum(avr_mcu) String(atmega3290pa) Value(131)
-+Enum(avr_mcu) String(atmega328p) Value(131)
++Enum(avr_mcu) String(atmega3250) Value(131)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32c1) Value(132)
-+Enum(avr_mcu) String(atmega329) Value(132)
++Enum(avr_mcu) String(atmega3250a) Value(132)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32m1) Value(133)
-+Enum(avr_mcu) String(atmega329a) Value(133)
++Enum(avr_mcu) String(atmega3250p) Value(133)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32u4) Value(134)
-+Enum(avr_mcu) String(atmega329p) Value(134)
++Enum(avr_mcu) String(atmega3250pa) Value(134)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32u6) Value(135)
-+Enum(avr_mcu) String(atmega329pa) Value(135)
++Enum(avr_mcu) String(atmega328) Value(135)
  
  EnumValue
 -Enum(avr_mcu) String(atmega406) Value(136)
-+Enum(avr_mcu) String(atmega3290) Value(136)
++Enum(avr_mcu) String(atmega328p) Value(136)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64) Value(137)
-+Enum(avr_mcu) String(atmega3290a) Value(137)
++Enum(avr_mcu) String(atmega329) Value(137)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64a) Value(138)
-+Enum(avr_mcu) String(atmega3290p) Value(138)
++Enum(avr_mcu) String(atmega329a) Value(138)
  
  EnumValue
 -Enum(avr_mcu) String(atmega640) Value(139)
-+Enum(avr_mcu) String(atmega3290pa) Value(139)
++Enum(avr_mcu) String(atmega329p) Value(139)
  
  EnumValue
 -Enum(avr_mcu) String(atmega644) Value(140)
-+Enum(avr_mcu) String(atmega32c1) Value(140)
++Enum(avr_mcu) String(atmega329pa) Value(140)
  
  EnumValue
 -Enum(avr_mcu) String(atmega644a) Value(141)
-+Enum(avr_mcu) String(atmega32m1) Value(141)
++Enum(avr_mcu) String(atmega3290) Value(141)
  
  EnumValue
 -Enum(avr_mcu) String(atmega644p) Value(142)
-+Enum(avr_mcu) String(atmega32u4) Value(142)
++Enum(avr_mcu) String(atmega3290a) Value(142)
  
  EnumValue
 -Enum(avr_mcu) String(atmega644pa) Value(143)
-+Enum(avr_mcu) String(atmega32u6) Value(143)
++Enum(avr_mcu) String(atmega3290p) Value(143)
  
  EnumValue
 -Enum(avr_mcu) String(atmega645) Value(144)
-+Enum(avr_mcu) String(atmega406) Value(144)
++Enum(avr_mcu) String(atmega3290pa) Value(144)
  
  EnumValue
 -Enum(avr_mcu) String(atmega645a) Value(145)
-+Enum(avr_mcu) String(atmega64) Value(145)
++Enum(avr_mcu) String(atmega32c1) Value(145)
  
  EnumValue
 -Enum(avr_mcu) String(atmega645p) Value(146)
-+Enum(avr_mcu) String(atmega64a) Value(146)
++Enum(avr_mcu) String(atmega32m1) Value(146)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6450) Value(147)
-+Enum(avr_mcu) String(atmega640) Value(147)
++Enum(avr_mcu) String(atmega32u4) Value(147)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6450a) Value(148)
-+Enum(avr_mcu) String(atmega644) Value(148)
++Enum(avr_mcu) String(atmega32u6) Value(148)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6450p) Value(149)
-+Enum(avr_mcu) String(atmega644a) Value(149)
++Enum(avr_mcu) String(atmega406) Value(149)
  
  EnumValue
 -Enum(avr_mcu) String(atmega649) Value(150)
-+Enum(avr_mcu) String(atmega644p) Value(150)
++Enum(avr_mcu) String(atmega64) Value(150)
  
  EnumValue
 -Enum(avr_mcu) String(atmega649a) Value(151)
-+Enum(avr_mcu) String(atmega644pa) Value(151)
++Enum(avr_mcu) String(atmega64a) Value(151)
  
  EnumValue
 -Enum(avr_mcu) String(atmega649p) Value(152)
-+Enum(avr_mcu) String(atmega645) Value(152)
++Enum(avr_mcu) String(atmega640) Value(152)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6490) Value(153)
-+Enum(avr_mcu) String(atmega645a) Value(153)
++Enum(avr_mcu) String(atmega644) Value(153)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hva) Value(154)
-+Enum(avr_mcu) String(atmega645p) Value(154)
++Enum(avr_mcu) String(atmega644a) Value(154)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hva2) Value(155)
-+Enum(avr_mcu) String(atmega6450) Value(155)
++Enum(avr_mcu) String(atmega644p) Value(155)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hvb) Value(156)
-+Enum(avr_mcu) String(atmega6450a) Value(156)
++Enum(avr_mcu) String(atmega644pa) Value(156)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32hvb) Value(157)
-+Enum(avr_mcu) String(atmega6450p) Value(157)
++Enum(avr_mcu) String(atmega645) Value(157)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6490a) Value(158)
-+Enum(avr_mcu) String(atmega649) Value(158)
++Enum(avr_mcu) String(atmega645a) Value(158)
  
  EnumValue
 -Enum(avr_mcu) String(atmega6490p) Value(159)
-+Enum(avr_mcu) String(atmega649a) Value(159)
++Enum(avr_mcu) String(atmega645p) Value(159)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64c1) Value(160)
-+Enum(avr_mcu) String(atmega649p) Value(160)
++Enum(avr_mcu) String(atmega6450) Value(160)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64m1) Value(161)
-+Enum(avr_mcu) String(atmega6490) Value(161)
++Enum(avr_mcu) String(atmega6450a) Value(161)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64hve) Value(162)
-+Enum(avr_mcu) String(atmega16hva) Value(162)
++Enum(avr_mcu) String(atmega6450p) Value(162)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64rfa2) Value(163)
-+Enum(avr_mcu) String(atmega16hva2) Value(163)
++Enum(avr_mcu) String(atmega649) Value(163)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64rfr2) Value(164)
-+Enum(avr_mcu) String(atmega32hvb) Value(164)
++Enum(avr_mcu) String(atmega649a) Value(164)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32hvb) Value(165)
-+Enum(avr_mcu) String(atmega6490a) Value(165)
++Enum(avr_mcu) String(atmega649p) Value(165)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32hvbrevb) Value(166)
-+Enum(avr_mcu) String(atmega6490p) Value(166)
++Enum(avr_mcu) String(atmega6490) Value(166)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16hva2) Value(167)
-+Enum(avr_mcu) String(atmega64c1) Value(167)
++Enum(avr_mcu) String(atmega16hva) Value(167)
  
  EnumValue
 -Enum(avr_mcu) String(atmega48hvf) Value(168)
-+Enum(avr_mcu) String(atmega64m1) Value(168)
++Enum(avr_mcu) String(atmega16hva2) Value(168)
  
  EnumValue
 -Enum(avr_mcu) String(at90can32) Value(169)
-+Enum(avr_mcu) String(atmega64hve) Value(169)
++Enum(avr_mcu) String(atmega32hvb) Value(169)
  
  EnumValue
 -Enum(avr_mcu) String(at90can64) Value(170)
-+Enum(avr_mcu) String(atmega64hve2) Value(170)
++Enum(avr_mcu) String(atmega6490a) Value(170)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm161) Value(171)
-+Enum(avr_mcu) String(atmega64rfr2) Value(171)
++Enum(avr_mcu) String(atmega6490p) Value(171)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm216) Value(172)
-+Enum(avr_mcu) String(atmega644rfr2) Value(172)
++Enum(avr_mcu) String(atmega64c1) Value(172)
  
  EnumValue
 -Enum(avr_mcu) String(at90pwm316) Value(173)
-+Enum(avr_mcu) String(atmega32hvbrevb) Value(173)
++Enum(avr_mcu) String(atmega64m1) Value(173)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32c1) Value(174)
-+Enum(avr_mcu) String(at90can32) Value(174)
++Enum(avr_mcu) String(atmega64hve) Value(174)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64c1) Value(175)
-+Enum(avr_mcu) String(at90can64) Value(175)
++Enum(avr_mcu) String(atmega64hve2) Value(175)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16m1) Value(176)
-+Enum(avr_mcu) String(at90pwm161) Value(176)
++Enum(avr_mcu) String(atmega64rfr2) Value(176)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32m1) Value(177)
-+Enum(avr_mcu) String(at90pwm216) Value(177)
++Enum(avr_mcu) String(atmega644rfr2) Value(177)
  
  EnumValue
 -Enum(avr_mcu) String(atmega64m1) Value(178)
-+Enum(avr_mcu) String(at90pwm316) Value(178)
++Enum(avr_mcu) String(atmega32hvbrevb) Value(178)
  
  EnumValue
 -Enum(avr_mcu) String(atmega16u4) Value(179)
-+Enum(avr_mcu) String(at90scr100) Value(179)
++Enum(avr_mcu) String(at90can32) Value(179)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32u4) Value(180)
-+Enum(avr_mcu) String(at90usb646) Value(180)
++Enum(avr_mcu) String(at90can64) Value(180)
  
  EnumValue
 -Enum(avr_mcu) String(atmega32u6) Value(181)
-+Enum(avr_mcu) String(at90usb647) Value(181)
++Enum(avr_mcu) String(at90pwm161) Value(181)
  
  EnumValue
 -Enum(avr_mcu) String(at90scr100) Value(182)
-+Enum(avr_mcu) String(at94k) Value(182)
++Enum(avr_mcu) String(at90pwm216) Value(182)
  
  EnumValue
 -Enum(avr_mcu) String(at90usb646) Value(183)
-+Enum(avr_mcu) String(m3000) Value(183)
++Enum(avr_mcu) String(at90pwm316) Value(183)
  
  EnumValue
 -Enum(avr_mcu) String(at90usb647) Value(184)
-+Enum(avr_mcu) String(avr51) Value(184)
++Enum(avr_mcu) String(at90scr100) Value(184)
  
  EnumValue
 -Enum(avr_mcu) String(at94k) Value(185)
-+Enum(avr_mcu) String(atmega128) Value(185)
++Enum(avr_mcu) String(at90usb646) Value(185)
  
  EnumValue
 -Enum(avr_mcu) String(m3000) Value(186)
-+Enum(avr_mcu) String(atmega128a) Value(186)
++Enum(avr_mcu) String(at90usb647) Value(186)
  
  EnumValue
 -Enum(avr_mcu) String(avr51) Value(187)
-+Enum(avr_mcu) String(atmega1280) Value(187)
++Enum(avr_mcu) String(at94k) Value(187)
  
  EnumValue
 -Enum(avr_mcu) String(atmega128) Value(188)
-+Enum(avr_mcu) String(atmega1281) Value(188)
++Enum(avr_mcu) String(m3000) Value(188)
  
  EnumValue
 -Enum(avr_mcu) String(atmega128a) Value(189)
-+Enum(avr_mcu) String(atmega1284) Value(189)
++Enum(avr_mcu) String(avr51) Value(189)
  
  EnumValue
 -Enum(avr_mcu) String(atmega1280) Value(190)
-+Enum(avr_mcu) String(atmega1284p) Value(190)
++Enum(avr_mcu) String(atmega128) Value(190)
  
  EnumValue
 -Enum(avr_mcu) String(atmega1281) Value(191)
-+Enum(avr_mcu) String(atmega128rfa1) Value(191)
++Enum(avr_mcu) String(atmega128a) Value(191)
  
  EnumValue
 -Enum(avr_mcu) String(atmega1284) Value(192)
-+Enum(avr_mcu) String(atmega128rfr2) Value(192)
++Enum(avr_mcu) String(atmega1280) Value(192)
  
  EnumValue
 -Enum(avr_mcu) String(atmega1284p) Value(193)
-+Enum(avr_mcu) String(atmega1284rfr2) Value(193)
++Enum(avr_mcu) String(atmega1281) Value(193)
  
  EnumValue
 -Enum(avr_mcu) String(atmega128rfa1) Value(194)
-+Enum(avr_mcu) String(at90can128) Value(194)
++Enum(avr_mcu) String(atmega1284) Value(194)
  
  EnumValue
 -Enum(avr_mcu) String(at90can128) Value(195)
-+Enum(avr_mcu) String(at90usb1286) Value(195)
++Enum(avr_mcu) String(atmega1284p) Value(195)
  
  EnumValue
 -Enum(avr_mcu) String(at90usb1286) Value(196)
-+Enum(avr_mcu) String(at90usb1287) Value(196)
++Enum(avr_mcu) String(atmega128rfa1) Value(196)
  
  EnumValue
 -Enum(avr_mcu) String(at90usb1287) Value(197)
-+Enum(avr_mcu) String(avr6) Value(197)
++Enum(avr_mcu) String(atmega128rfr2) Value(197)
  
  EnumValue
 -Enum(avr_mcu) String(avr6) Value(198)
-+Enum(avr_mcu) String(atmega2560) Value(198)
++Enum(avr_mcu) String(atmega1284rfr2) Value(198)
  
  EnumValue
 -Enum(avr_mcu) String(atmega2560) Value(199)
-+Enum(avr_mcu) String(atmega2561) Value(199)
++Enum(avr_mcu) String(at90can128) Value(199)
  
  EnumValue
 -Enum(avr_mcu) String(atmega2561) Value(200)
-+Enum(avr_mcu) String(atmega256rfr2) Value(200)
++Enum(avr_mcu) String(at90usb1286) Value(200)
  
  EnumValue
 -Enum(avr_mcu) String(avrxmega2) Value(201)
-+Enum(avr_mcu) String(atmega2564rfr2) Value(201)
++Enum(avr_mcu) String(at90usb1287) Value(201)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega16a4) Value(202)
-+Enum(avr_mcu) String(avr7) Value(202)
++Enum(avr_mcu) String(avr6) Value(202)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega16d4) Value(203)
-+Enum(avr_mcu) String(ata5782) Value(203)
++Enum(avr_mcu) String(atmega2560) Value(203)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega16x1) Value(204)
-+Enum(avr_mcu) String(ata5831) Value(204)
++Enum(avr_mcu) String(atmega2561) Value(204)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega32a4) Value(205)
-+Enum(avr_mcu) String(avrxmega2) Value(205)
++Enum(avr_mcu) String(atmega256rfr2) Value(205)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega32d4) Value(206)
-+Enum(avr_mcu) String(atxmega8e5) Value(206)
++Enum(avr_mcu) String(atmega2564rfr2) Value(206)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega32x1) Value(207)
-+Enum(avr_mcu) String(atxmega16a4) Value(207)
++Enum(avr_mcu) String(avrxmega2) Value(207)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt112sl) Value(208)
-+Enum(avr_mcu) String(atxmega16a4u) Value(208)
++Enum(avr_mcu) String(atxmega8e5) Value(208)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt224) Value(209)
-+Enum(avr_mcu) String(atxmega16c4) Value(209)
++Enum(avr_mcu) String(atxmega16a4) Value(209)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt224e) Value(210)
-+Enum(avr_mcu) String(atxmega16d4) Value(210)
++Enum(avr_mcu) String(atxmega16a4u) Value(210)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt336s) Value(211)
-+Enum(avr_mcu) String(atxmega16e5) Value(211)
++Enum(avr_mcu) String(atxmega16c4) Value(211)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega16a4u) Value(212)
-+Enum(avr_mcu) String(atxmega32a4) Value(212)
++Enum(avr_mcu) String(atxmega16d4) Value(212)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega16c4) Value(213)
-+Enum(avr_mcu) String(atxmega32a4u) Value(213)
++Enum(avr_mcu) String(atxmega16e5) Value(213)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega32a4u) Value(214)
-+Enum(avr_mcu) String(atxmega32c3) Value(214)
++Enum(avr_mcu) String(atxmega32a4) Value(214)
  
  EnumValue
- Enum(avr_mcu) String(atxmega32c4) Value(215)
+-Enum(avr_mcu) String(atxmega32c4) Value(215)
++Enum(avr_mcu) String(atxmega32a4u) Value(215)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega32e5) Value(216)
-+Enum(avr_mcu) String(atxmega32d3) Value(216)
++Enum(avr_mcu) String(atxmega32c3) Value(216)
  
  EnumValue
 -Enum(avr_mcu) String(avrxmega4) Value(217)
-+Enum(avr_mcu) String(atxmega32d4) Value(217)
++Enum(avr_mcu) String(atxmega32c4) Value(217)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64a3) Value(218)
-+Enum(avr_mcu) String(atxmega32e5) Value(218)
++Enum(avr_mcu) String(atxmega32d3) Value(218)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64d3) Value(219)
-+Enum(avr_mcu) String(avrxmega4) Value(219)
++Enum(avr_mcu) String(atxmega32d4) Value(219)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64a3u) Value(220)
-+Enum(avr_mcu) String(atxmega64a3) Value(220)
++Enum(avr_mcu) String(atxmega32e5) Value(220)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64a4u) Value(221)
-+Enum(avr_mcu) String(atxmega64a3u) Value(221)
++Enum(avr_mcu) String(avrxmega4) Value(221)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64b1) Value(222)
-+Enum(avr_mcu) String(atxmega64a4u) Value(222)
++Enum(avr_mcu) String(atxmega64a3) Value(222)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64b3) Value(223)
-+Enum(avr_mcu) String(atxmega64b1) Value(223)
++Enum(avr_mcu) String(atxmega64a3u) Value(223)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64c3) Value(224)
-+Enum(avr_mcu) String(atxmega64b3) Value(224)
++Enum(avr_mcu) String(atxmega64a4u) Value(224)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64d4) Value(225)
-+Enum(avr_mcu) String(atxmega64c3) Value(225)
++Enum(avr_mcu) String(atxmega64b1) Value(225)
  
  EnumValue
 -Enum(avr_mcu) String(avrxmega5) Value(226)
-+Enum(avr_mcu) String(atxmega64d3) Value(226)
++Enum(avr_mcu) String(atxmega64b3) Value(226)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64a1) Value(227)
-+Enum(avr_mcu) String(atxmega64d4) Value(227)
++Enum(avr_mcu) String(atxmega64c3) Value(227)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega64a1u) Value(228)
-+Enum(avr_mcu) String(avrxmega5) Value(228)
++Enum(avr_mcu) String(atxmega64d3) Value(228)
  
  EnumValue
 -Enum(avr_mcu) String(avrxmega6) Value(229)
-+Enum(avr_mcu) String(atxmega64a1) Value(229)
++Enum(avr_mcu) String(atxmega64d4) Value(229)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128a3) Value(230)
-+Enum(avr_mcu) String(atxmega64a1u) Value(230)
++Enum(avr_mcu) String(avrxmega5) Value(230)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128d3) Value(231)
-+Enum(avr_mcu) String(avrxmega6) Value(231)
++Enum(avr_mcu) String(atxmega64a1) Value(231)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega192a3) Value(232)
-+Enum(avr_mcu) String(atxmega128a3) Value(232)
++Enum(avr_mcu) String(atxmega64a1u) Value(232)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega192d3) Value(233)
-+Enum(avr_mcu) String(atxmega128a3u) Value(233)
++Enum(avr_mcu) String(avrxmega6) Value(233)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256a3) Value(234)
-+Enum(avr_mcu) String(atxmega128b1) Value(234)
++Enum(avr_mcu) String(atxmega128a3) Value(234)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256a3b) Value(235)
-+Enum(avr_mcu) String(atxmega128b3) Value(235)
++Enum(avr_mcu) String(atxmega128a3u) Value(235)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256a3bu) Value(236)
-+Enum(avr_mcu) String(atxmega128c3) Value(236)
++Enum(avr_mcu) String(atxmega128b1) Value(236)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256d3) Value(237)
-+Enum(avr_mcu) String(atxmega128d3) Value(237)
++Enum(avr_mcu) String(atxmega128b3) Value(237)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128a3u) Value(238)
-+Enum(avr_mcu) String(atxmega128d4) Value(238)
++Enum(avr_mcu) String(atxmega128c3) Value(238)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128b1) Value(239)
-+Enum(avr_mcu) String(atxmega192a3) Value(239)
++Enum(avr_mcu) String(atxmega128d3) Value(239)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128b3) Value(240)
-+Enum(avr_mcu) String(atxmega192a3u) Value(240)
++Enum(avr_mcu) String(atxmega128d4) Value(240)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128c3) Value(241)
-+Enum(avr_mcu) String(atxmega192c3) Value(241)
++Enum(avr_mcu) String(atxmega192a3) Value(241)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega128d4) Value(242)
-+Enum(avr_mcu) String(atxmega192d3) Value(242)
++Enum(avr_mcu) String(atxmega192a3u) Value(242)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt540s) Value(243)
-+Enum(avr_mcu) String(atxmega256a3) Value(243)
++Enum(avr_mcu) String(atxmega192c3) Value(243)
  
  EnumValue
 -Enum(avr_mcu) String(atmxt540sreva) Value(244)
-+Enum(avr_mcu) String(atxmega256a3b) Value(244)
++Enum(avr_mcu) String(atxmega192d3) Value(244)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega192a3u) Value(245)
-+Enum(avr_mcu) String(atxmega256a3bu) Value(245)
++Enum(avr_mcu) String(atxmega256a3) Value(245)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega192c3) Value(246)
-+Enum(avr_mcu) String(atxmega256a3u) Value(246)
++Enum(avr_mcu) String(atxmega256a3b) Value(246)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256a3u) Value(247)
-+Enum(avr_mcu) String(atxmega256c3) Value(247)
++Enum(avr_mcu) String(atxmega256a3bu) Value(247)
  
  EnumValue
 -Enum(avr_mcu) String(atxmega256c3) Value(248)
-+Enum(avr_mcu) String(atxmega256d3) Value(248)
++Enum(avr_mcu) String(atxmega256a3u) Value(248)
  
  EnumValue
- Enum(avr_mcu) String(atxmega384c3) Value(249)
-@@ -789,20 +789,41 @@ EnumValue
- Enum(avr_mcu) String(atxmega128a4u) Value(254)
+-Enum(avr_mcu) String(atxmega384c3) Value(249)
++Enum(avr_mcu) String(atxmega256c3) Value(249)
+ 
+ EnumValue
+-Enum(avr_mcu) String(atxmega384d3) Value(250)
++Enum(avr_mcu) String(atxmega256d3) Value(250)
+ 
+ EnumValue
+-Enum(avr_mcu) String(avrxmega7) Value(251)
++Enum(avr_mcu) String(atxmega384c3) Value(251)
+ 
+ EnumValue
+-Enum(avr_mcu) String(atxmega128a1) Value(252)
++Enum(avr_mcu) String(atxmega384d3) Value(252)
+ 
+ EnumValue
+-Enum(avr_mcu) String(atxmega128a1u) Value(253)
++Enum(avr_mcu) String(avrxmega7) Value(253)
+ 
+ EnumValue
+-Enum(avr_mcu) String(atxmega128a4u) Value(254)
++Enum(avr_mcu) String(atxmega128a1) Value(254)
  
  EnumValue
 -Enum(avr_mcu) String(avr1) Value(255)
-+Enum(avr_mcu) String(avrtiny) Value(255)
++Enum(avr_mcu) String(atxmega128a1u) Value(255)
  
  EnumValue
 -Enum(avr_mcu) String(at90s1200) Value(256)
-+Enum(avr_mcu) String(attiny4) Value(256)
++Enum(avr_mcu) String(atxmega128a4u) Value(256)
  
  EnumValue
 -Enum(avr_mcu) String(attiny11) Value(257)
-+Enum(avr_mcu) String(attiny5) Value(257)
++Enum(avr_mcu) String(avrtiny) Value(257)
  
  EnumValue
 -Enum(avr_mcu) String(attiny12) Value(258)
-+Enum(avr_mcu) String(attiny9) Value(258)
++Enum(avr_mcu) String(attiny4) Value(258)
  
  EnumValue
 -Enum(avr_mcu) String(attiny15) Value(259)
-+Enum(avr_mcu) String(attiny10) Value(259)
++Enum(avr_mcu) String(attiny5) Value(259)
  
  EnumValue
 -Enum(avr_mcu) String(attiny28) Value(260)
-+Enum(avr_mcu) String(attiny20) Value(260)
++Enum(avr_mcu) String(attiny9) Value(260)
 +
 +EnumValue
-+Enum(avr_mcu) String(attiny40) Value(261)
++Enum(avr_mcu) String(attiny10) Value(261)
 +
 +EnumValue
-+Enum(avr_mcu) String(avr1) Value(262)
++Enum(avr_mcu) String(attiny20) Value(262)
 +
 +EnumValue
-+Enum(avr_mcu) String(at90s1200) Value(263)
++Enum(avr_mcu) String(attiny40) Value(263)
 +
 +EnumValue
-+Enum(avr_mcu) String(attiny11) Value(264)
++Enum(avr_mcu) String(avr1) Value(264)
 +
 +EnumValue
-+Enum(avr_mcu) String(attiny12) Value(265)
++Enum(avr_mcu) String(at90s1200) Value(265)
 +
 +EnumValue
-+Enum(avr_mcu) String(attiny15) Value(266)
++Enum(avr_mcu) String(attiny11) Value(266)
 +
 +EnumValue
-+Enum(avr_mcu) String(attiny28) Value(267)
++Enum(avr_mcu) String(attiny12) Value(267)
++
++EnumValue
++Enum(avr_mcu) String(attiny15) Value(268)
++
++EnumValue
++Enum(avr_mcu) String(attiny28) Value(269)
  
 diff --git a/gcc/config/avr/avr.c b/gcc/config/avr/avr.c
-index c916d6b..c0bcb12 100644
+index c916d6b..c7e3467 100644
 --- a/gcc/config/avr/avr.c
 +++ b/gcc/config/avr/avr.c
 @@ -77,6 +77,17 @@
@@ -3623,6 +3687,15 @@ index c916d6b..c0bcb12 100644
        reg_base = REGNO (XEXP (base, 0));
  
        if (disp > MAX_LD_OFFSET (GET_MODE (dest)))
+@@ -3970,7 +4587,7 @@ avr_out_store_psi (rtx insn, rtx *op, int *plen)
+                                 "std Y+61,%A1"    CR_TAB
+                                 "std Y+62,%B1"    CR_TAB
+                                 "std Y+63,%C1"    CR_TAB
+-                                "sbiw r28,%o0-60", op, plen, -5);
++                                "sbiw r28,%o0-61", op, plen, -5);
+ 
+           return avr_asm_len ("subi r28,lo8(-%o0)" CR_TAB
+                               "sbci r29,hi8(-%o0)" CR_TAB
 @@ -4074,6 +4691,30 @@ avr_out_movpsi (rtx insn, rtx *op, int *plen)
    return "";
  }
@@ -4487,7 +4560,7 @@ index c916d6b..c0bcb12 100644
  #define TARGET_HARD_REGNO_SCRATCH_OK avr_hard_regno_scratch_ok
  #undef  TARGET_CASE_VALUES_THRESHOLD
 diff --git a/gcc/config/avr/avr.h b/gcc/config/avr/avr.h
-index f223a61..fa7c6e7 100644
+index f223a61..d76be98 100644
 --- a/gcc/config/avr/avr.h
 +++ b/gcc/config/avr/avr.h
 @@ -88,8 +88,9 @@ enum
@@ -4528,7 +4601,23 @@ index f223a61..fa7c6e7 100644
  
  #define ELIMINABLE_REGS {					\
        {ARG_POINTER_REGNUM, FRAME_POINTER_REGNUM},		\
-@@ -510,7 +514,8 @@ extern const char *avr_device_to_sp8 (int argc, const char **argv);
+@@ -489,6 +493,7 @@ typedef struct avr_args
+ extern const char *avr_device_to_as (int argc, const char **argv);
+ extern const char *avr_device_to_ld (int argc, const char **argv);
+ extern const char *avr_device_to_data_start (int argc, const char **argv);
++extern const char *avr_device_to_text_start (int argc, const char **argv);
+ extern const char *avr_device_to_startfiles (int argc, const char **argv);
+ extern const char *avr_device_to_devicelib (int argc, const char **argv);
+ extern const char *avr_device_to_sp8 (int argc, const char **argv);
+@@ -497,6 +502,7 @@ extern const char *avr_device_to_sp8 (int argc, const char **argv);
+   { "device_to_as", avr_device_to_as },                 \
+   { "device_to_ld", avr_device_to_ld },                 \
+   { "device_to_data_start", avr_device_to_data_start }, \
++  { "device_to_text_start", avr_device_to_text_start }, \
+   { "device_to_startfile", avr_device_to_startfiles },  \
+   { "device_to_devicelib", avr_device_to_devicelib },   \
+   { "device_to_sp8", avr_device_to_sp8 },
+@@ -510,7 +516,8 @@ extern const char *avr_device_to_sp8 (int argc, const char **argv);
      %{!fenforce-eh-specs:-fno-enforce-eh-specs} \
      %{!fexceptions:-fno-exceptions}"
  
@@ -4538,7 +4627,17 @@ index f223a61..fa7c6e7 100644
    
  #define LINK_SPEC "\
  %{mrelax:--relax\
-@@ -571,6 +576,10 @@ struct GTY(()) machine_function
+@@ -522,7 +529,8 @@ extern const char *avr_device_to_sp8 (int argc, const char **argv);
+                                mmcu=at90can64*|\
+                                mmcu=at90usb64*:--pmem-wrap-around=64k}}}\
+ %:device_to_ld(%{mmcu=*:%*})\
+-%:device_to_data_start(%{mmcu=*:%*})"
++%:device_to_data_start(%{mmcu=*:%*})\
++%:device_to_text_start(%{mmcu=*:%*})"
+ 
+ #define LIB_SPEC \
+   "%{!mmcu=at90s1*:%{!mmcu=attiny11:%{!mmcu=attiny12:%{!mmcu=attiny15:%{!mmcu=attiny28: -lc }}}}}"
+@@ -571,6 +579,10 @@ struct GTY(()) machine_function
    /* 'true' - if current function is a signal function 
       as specified by the "signal" attribute.  */
    int is_signal;
@@ -4772,7 +4871,7 @@ index 6b2e755..9b0f782 100644
 +Target Report Mask(FRACT_CONV_TRUNC)
 +Allow to use truncation instead of rounding towards 0 for fractional int types
 diff --git a/gcc/config/avr/driver-avr.c b/gcc/config/avr/driver-avr.c
-index e859f5f..c767c81 100644
+index e859f5f..b1448e7 100644
 --- a/gcc/config/avr/driver-avr.c
 +++ b/gcc/config/avr/driver-avr.c
 @@ -59,8 +59,8 @@ avr_device_to_as (int argc, const char **argv)
@@ -4786,7 +4885,38 @@ index e859f5f..c767c81 100644
  }
  
  /* Returns command line parameters to pass to ld.  */
-@@ -144,7 +144,7 @@ avr_device_to_sp8 (int argc, const char **argv)
+@@ -101,6 +101,30 @@ avr_device_to_data_start (int argc, const char **argv)
+   return concat ("-Tdata ", data_section_start_str, NULL);    
+ }
+ 
++/* Returns command line parameters that describe start of text section.  */
++
++const char *
++avr_device_to_text_start (int argc, const char **argv)
++{
++  unsigned long text_section_start;
++  char text_section_start_str[16];
++
++  if (0 == argc)
++    return NULL;
++
++  avr_set_current_device (argv[0]);
++
++  if (avr_current_device->text_section_start == 0)
++    return NULL;
++
++  text_section_start = avr_current_device->text_section_start;
++
++  snprintf (text_section_start_str, sizeof(text_section_start_str) - 1,
++            "0x%lX", text_section_start);
++
++  return concat ("-Ttext ", text_section_start_str, NULL);
++}
++
+ /* Returns command line parameters that describe the device startfile.  */
+ 
+ const char *
+@@ -144,7 +168,7 @@ avr_device_to_sp8 (int argc, const char **argv)
            || avr_current_device->arch == ARCH_AVR25))
      return "";
  
@@ -4862,7 +4992,7 @@ index 14ed658..78085be 100644
      n_mcu++
      option[name]      = "mmcu=" name
 diff --git a/gcc/config/avr/t-multilib b/gcc/config/avr/t-multilib
-index 6b1db60..d7c61d6 100644
+index 6b1db60..3539264 100644
 --- a/gcc/config/avr/t-multilib
 +++ b/gcc/config/avr/t-multilib
 @@ -21,9 +21,9 @@
@@ -4870,19 +5000,14 @@ index 6b1db60..d7c61d6 100644
  # <http://www.gnu.org/licenses/>.
  
 -MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7 msp8
-+MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avr7/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8
++MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8
  
 -MULTILIB_DIRNAMES =  avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 tiny-stack avr25/tiny-stack
-+MULTILIB_DIRNAMES =  avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avr7 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack avr25/tiny-stack
++MULTILIB_DIRNAMES =  avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack avr25/tiny-stack
  
  MULTILIB_EXCEPTIONS = \
  	mmcu=avr3/msp8 \
-@@ -33,11 +33,13 @@ MULTILIB_EXCEPTIONS = \
- 	mmcu=avr5/msp8 \
- 	mmcu=avr51/msp8 \
- 	mmcu=avr6/msp8 \
-+	mmcu=avr7/msp8 \
- 	mmcu=avrxmega2/msp8 \
+@@ -37,7 +37,8 @@ MULTILIB_EXCEPTIONS = \
  	mmcu=avrxmega4/msp8 \
  	mmcu=avrxmega5/msp8 \
  	mmcu=avrxmega6/msp8 \
@@ -4892,7 +5017,7 @@ index 6b1db60..d7c61d6 100644
  
  MULTILIB_MATCHES = \
  	mmcu?avr2=mmcu?at90s2313 \
-@@ -52,8 +54,8 @@ MULTILIB_MATCHES = \
+@@ -52,8 +53,8 @@ MULTILIB_MATCHES = \
  	mmcu?avr2=mmcu?at90s8515 \
  	mmcu?avr2=mmcu?at90c8534 \
  	mmcu?avr2=mmcu?at90s8535 \
@@ -4902,7 +5027,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr25=mmcu?attiny13 \
  	mmcu?avr25=mmcu?attiny13a \
  	mmcu?avr25=mmcu?attiny2313 \
-@@ -63,6 +65,7 @@ MULTILIB_MATCHES = \
+@@ -63,6 +64,7 @@ MULTILIB_MATCHES = \
  	mmcu?avr25=mmcu?attiny4313 \
  	mmcu?avr25=mmcu?attiny44 \
  	mmcu?avr25=mmcu?attiny44a \
@@ -4910,7 +5035,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr25=mmcu?attiny84 \
  	mmcu?avr25=mmcu?attiny84a \
  	mmcu?avr25=mmcu?attiny25 \
-@@ -78,12 +81,16 @@ MULTILIB_MATCHES = \
+@@ -78,12 +80,16 @@ MULTILIB_MATCHES = \
  	mmcu?avr25=mmcu?attiny87 \
  	mmcu?avr25=mmcu?attiny48 \
  	mmcu?avr25=mmcu?attiny88 \
@@ -4927,7 +5052,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr35=mmcu?at90usb82 \
  	mmcu?avr35=mmcu?at90usb162 \
  	mmcu?avr35=mmcu?atmega8u2 \
-@@ -93,6 +100,8 @@ MULTILIB_MATCHES = \
+@@ -93,16 +99,20 @@ MULTILIB_MATCHES = \
  	mmcu?avr35=mmcu?attiny1634 \
  	mmcu?avr4=mmcu?ata6285 \
  	mmcu?avr4=mmcu?ata6286 \
@@ -4936,20 +5061,39 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr4=mmcu?atmega8 \
  	mmcu?avr4=mmcu?atmega8a \
  	mmcu?avr4=mmcu?atmega48 \
-@@ -112,9 +121,12 @@ MULTILIB_MATCHES = \
+ 	mmcu?avr4=mmcu?atmega48a \
+ 	mmcu?avr4=mmcu?atmega48p \
+ 	mmcu?avr4=mmcu?atmega48pa \
++	mmcu?avr4=mmcu?atmega48pb \
+ 	mmcu?avr4=mmcu?atmega88 \
+ 	mmcu?avr4=mmcu?atmega88a \
+ 	mmcu?avr4=mmcu?atmega88p \
+ 	mmcu?avr4=mmcu?atmega88pa \
++	mmcu?avr4=mmcu?atmega88pb \
+ 	mmcu?avr4=mmcu?atmega8515 \
+ 	mmcu?avr4=mmcu?atmega8535 \
+ 	mmcu?avr4=mmcu?atmega8hva \
+@@ -112,9 +122,14 @@ MULTILIB_MATCHES = \
  	mmcu?avr4=mmcu?at90pwm3 \
  	mmcu?avr4=mmcu?at90pwm3b \
  	mmcu?avr4=mmcu?at90pwm81 \
 +	mmcu?avr5=mmcu?ata5702m322 \
++	mmcu?avr5=mmcu?ata5782 \
  	mmcu?avr5=mmcu?ata5790 \
  	mmcu?avr5=mmcu?ata5790n \
  	mmcu?avr5=mmcu?ata5795 \
++	mmcu?avr5=mmcu?ata5831 \
 +	mmcu?avr5=mmcu?ata6613c \
 +	mmcu?avr5=mmcu?ata6614q \
  	mmcu?avr5=mmcu?atmega16 \
  	mmcu?avr5=mmcu?atmega16a \
  	mmcu?avr5=mmcu?atmega161 \
-@@ -135,15 +147,12 @@ MULTILIB_MATCHES = \
+@@ -131,19 +146,17 @@ MULTILIB_MATCHES = \
+ 	mmcu?avr5=mmcu?atmega168a \
+ 	mmcu?avr5=mmcu?atmega168p \
+ 	mmcu?avr5=mmcu?atmega168pa \
++	mmcu?avr5=mmcu?atmega168pb \
+ 	mmcu?avr5=mmcu?atmega169 \
  	mmcu?avr5=mmcu?atmega169a \
  	mmcu?avr5=mmcu?atmega169p \
  	mmcu?avr5=mmcu?atmega169pa \
@@ -4965,7 +5109,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr5=mmcu?atmega323 \
  	mmcu?avr5=mmcu?atmega324a \
  	mmcu?avr5=mmcu?atmega324p \
-@@ -151,6 +160,7 @@ MULTILIB_MATCHES = \
+@@ -151,6 +164,7 @@ MULTILIB_MATCHES = \
  	mmcu?avr5=mmcu?atmega325 \
  	mmcu?avr5=mmcu?atmega325a \
  	mmcu?avr5=mmcu?atmega325p \
@@ -4973,7 +5117,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr5=mmcu?atmega3250 \
  	mmcu?avr5=mmcu?atmega3250a \
  	mmcu?avr5=mmcu?atmega3250p \
-@@ -189,32 +199,21 @@ MULTILIB_MATCHES = \
+@@ -189,32 +203,21 @@ MULTILIB_MATCHES = \
  	mmcu?avr5=mmcu?atmega6490 \
  	mmcu?avr5=mmcu?atmega16hva \
  	mmcu?avr5=mmcu?atmega16hva2 \
@@ -5008,7 +5152,7 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr5=mmcu?at90scr100 \
  	mmcu?avr5=mmcu?at90usb646 \
  	mmcu?avr5=mmcu?at90usb647 \
-@@ -227,57 +226,65 @@ MULTILIB_MATCHES = \
+@@ -227,57 +230,63 @@ MULTILIB_MATCHES = \
  	mmcu?avr51=mmcu?atmega1284 \
  	mmcu?avr51=mmcu?atmega1284p \
  	mmcu?avr51=mmcu?atmega128rfa1 \
@@ -5021,8 +5165,6 @@ index 6b1db60..d7c61d6 100644
  	mmcu?avr6=mmcu?atmega2561 \
 +	mmcu?avr6=mmcu?atmega256rfr2 \
 +	mmcu?avr6=mmcu?atmega2564rfr2 \
-+	mmcu?avr7=mmcu?ata5782 \
-+	mmcu?avr7=mmcu?ata5831 \
 +	mmcu?avrxmega2=mmcu?atxmega8e5 \
  	mmcu?avrxmega2=mmcu?atxmega16a4 \
 -	mmcu?avrxmega2=mmcu?atxmega16d4 \
@@ -5132,7 +5274,7 @@ index f2021b9..334d955 100644
  	      has_mem = true;
  	      num_mems++;
 diff --git a/gcc/doc/avr-mmcu.texi b/gcc/doc/avr-mmcu.texi
-index b1313c4..45d3b9a 100644
+index b1313c4..d018ff5 100644
 --- a/gcc/doc/avr-mmcu.texi
 +++ b/gcc/doc/avr-mmcu.texi
 @@ -18,7 +18,7 @@
@@ -5144,7 +5286,7 @@ index b1313c4..45d3b9a 100644
  
  @item avr3
  ``Classic'' devices with 16@tie{}KiB up to 64@tie{}KiB of  program memory.
-@@ -30,27 +30,31 @@
+@@ -30,27 +30,27 @@
  
  @item avr35
  ``Classic'' devices with 16@tie{}KiB up to 64@tie{}KiB of program memory and with the @code{MOVW} instruction.
@@ -5154,12 +5296,12 @@ index b1313c4..45d3b9a 100644
  @item avr4
  ``Enhanced'' devices with up to 8@tie{}KiB of program memory.
 -@*@var{mcu}@tie{}= @code{ata6285}, @code{ata6286}, @code{atmega48}, @code{atmega48a}, @code{atmega48p}, @code{atmega48pa}, @code{atmega8}, @code{atmega8a}, @code{atmega8hva}, @code{atmega8515}, @code{atmega8535}, @code{atmega88}, @code{atmega88a}, @code{atmega88p}, @code{atmega88pa}, @code{at90pwm1}, @code{at90pwm2}, @code{at90pwm2b}, @code{at90pwm3}, @code{at90pwm3b}, @code{at90pwm81}.
-+@*@var{mcu}@tie{}= @code{ata6285}, @code{ata6286}, @code{ata6289}, @code{ata6612c}, @code{atmega48}, @code{atmega48a}, @code{atmega48p}, @code{atmega48pa}, @code{atmega8}, @code{atmega8a}, @code{atmega8hva}, @code{atmega8515}, @code{atmega8535}, @code{atmega88}, @code{atmega88a}, @code{atmega88p}, @code{atmega88pa}, @code{at90pwm1}, @code{at90pwm2}, @code{at90pwm2b}, @code{at90pwm3}, @code{at90pwm3b}, @code{at90pwm81}.
++@*@var{mcu}@tie{}= @code{ata6285}, @code{ata6286}, @code{ata6289}, @code{ata6612c}, @code{atmega48}, @code{atmega48a}, @code{atmega48p}, @code{atmega48pa}, @code{atmega48pb}, @code{atmega8}, @code{atmega8a}, @code{atmega8hva}, @code{atmega8515}, @code{atmega8535}, @code{atmega88}, @code{atmega88a}, @code{atmega88p}, @code{atmega88pa}, @code{atmega88pb}, @code{at90pwm1}, @code{at90pwm2}, @code{at90pwm2b}, @code{at90pwm3}, @code{at90pwm3b}, @code{at90pwm81}.
  
  @item avr5
  ``Enhanced'' devices with 16@tie{}KiB up to 64@tie{}KiB of program memory.
 -@*@var{mcu}@tie{}= @code{ata5790}, @code{ata5790n}, @code{ata5795}, @code{atmega16}, @code{atmega16a}, @code{atmega16hva}, @code{atmega16hva}, @code{atmega16hva2}, @code{atmega16hva2}, @code{atmega16hvb}, @code{atmega16hvb}, @code{atmega16hvbrevb}, @code{atmega16m1}, @code{atmega16m1}, @code{atmega16u4}, @code{atmega16u4}, @code{atmega161}, @code{atmega162}, @code{atmega163}, @code{atmega164a}, @code{atmega164p}, @code{atmega164pa}, @code{atmega165}, @code{atmega165a}, @code{atmega165p}, @code{atmega165pa}, @code{atmega168}, @code{atmega168a}, @code{atmega168p}, @code{atmega168pa}, @code{atmega169}, @code{atmega169a}, @code{atmega169p}, @code{atmega169pa}, @code{atmega26hvg}, @code{atmega32}, @code{atmega32a}, @code{atmega32a}, @code{atmega32c1}, @code{atmega32c1}, @code{atmega32hvb}, @code{atmega32hvb}, @code{atmega32hvbrevb}, @code{atmega32m1}, @code{atmega32m1}, @code{atmega32u4}, @code{atmega32u4}, @code{atmega32u6}, @code{atmega32u6}, @code{atmega323}, @code{atmega324a}, @code{atmega324p}, @code{atmega324pa}, @code{atmega325}, @code{atmega325a}, @code{atmega325p}, @code{atmega3250}, @code{atmega3250a}, @code{atmega3250p}, @code{atmega3250pa}, @code{atmega328}, @code{atmega328p}, @code{atmega329}, @code{atmega329a}, @code{atmega329p}, @code{atmega329pa}, @code{atmega3290}, @code{atmega3290a}, @code{atmega3290p}, @code{atmega3290pa}, @code{atmega406}, @code{atmega48hvf}, @code{atmega64}, @code{atmega64a}, @code{atmega64c1}, @code{atmega64c1}, @code{atmega64hve}, @code{atmega64m1}, @code{atmega64m1}, @code{atmega64rfa2}, @code{atmega64rfr2}, @code{atmega640}, @code{atmega644}, @code{atmega644a}, @code{atmega644p}, @code{atmega644pa}, @code{atmega645}, @code{atmega645a}, @code{atmega645p}, @code{atmega6450}, @code{atmega6450a}, @code{atmega6450p}, @code{atmega649}, @code{atmega649a}, @code{atmega649p}, @code{atmega6490}, @code{atmega6490a}, @code{atmega6490p}, @code{at90can32}, @code{at90can64}, @code{at90pwm161}, @code{at90pwm216}, @code{at90pwm316}, @code{at90scr100}, @code{at90usb646}, @code{at90usb647}, @code{at94k}, @code{m3000}.
-+@*@var{mcu}@tie{}= @code{ata5702m322}, @code{ata5790}, @code{ata5790n}, @code{ata5795}, @code{ata6613c}, @code{ata6614q}, @code{atmega16}, @code{atmega16a}, @code{atmega16hva}, @code{atmega16hva2}, @code{atmega16hvb}, @code{atmega16hvbrevb}, @code{atmega16m1}, @code{atmega16u4}, @code{atmega161}, @code{atmega162}, @code{atmega163}, @code{atmega164a}, @code{atmega164p}, @code{atmega164pa}, @code{atmega165}, @code{atmega165a}, @code{atmega165p}, @code{atmega165pa}, @code{atmega168}, @code{atmega168a}, @code{atmega168p}, @code{atmega168pa}, @code{atmega169}, @code{atmega169a}, @code{atmega169p}, @code{atmega169pa}, @code{atmega32}, @code{atmega32a}, @code{atmega32c1}, @code{atmega32hvb}, @code{atmega32hvbrevb}, @code{atmega32m1}, @code{atmega32u4}, @code{atmega32u6}, @code{atmega323}, @code{atmega324a}, @code{atmega324p}, @code{atmega324pa}, @code{atmega325}, @code{atmega325a}, @code{atmega325p}, @code{atmega325pa}, @code{atmega3250}, @code{atmega3250a}, @code{atmega3250p}, @code{atmega3250pa}, @code{atmega328}, @code{atmega328p}, @code{atmega329}, @code{atmega329a}, @code{atmega329p}, @code{atmega329pa}, @code{atmega3290}, @code{atmega3290a}, @code{atmega3290p}, @code{atmega3290pa}, @code{atmega406}, @code{atmega64}, @code{atmega64a}, @code{atmega64c1}, @code{atmega64hve}, @code{atmega64hve2}, @code{atmega64m1}, @code{atmega64rfr2}, @code{atmega640}, @code{atmega644}, @code{atmega644a}, @code{atmega644p}, @code{atmega644pa}, @code{atmega644rfr2}, @code{atmega645}, @code{atmega645a}, @code{atmega645p}, @code{atmega6450}, @code{atmega6450a}, @code{atmega6450p}, @code{atmega649}, @code{atmega649a}, @code{atmega649p}, @code{atmega6490}, @code{atmega6490a}, @code{atmega6490p}, @code{at90can32}, @code{at90can64}, @code{at90pwm161}, @code{at90pwm216}, @code{at90pwm316}, @code{at90scr100}, @code{at90usb646}, @code{at90usb647}, @code{at94k}, @code{m3000}.
++@*@var{mcu}@tie{}= @code{ata5702m322}, @code{ata5782}, @code{ata5790}, @code{ata5790n}, @code{ata5795}, @code{ata5831}, @code{ata6613c}, @code{ata6614q}, @code{atmega16}, @code{atmega16a}, @code{atmega16hva}, @code{atmega16hva2}, @code{atmega16hvb}, @code{atmega16hvbrevb}, @code{atmega16m1}, @code{atmega16u4}, @code{atmega161}, @code{atmega162}, @code{atmega163}, @code{atmega164a}, @code{atmega164p}, @code{atmega164pa}, @code{atmega165}, @code{atmega165a}, @code{atmega165p}, @code{atmega165pa}, @code{atmega168}, @code{atmega168a}, @code{atmega168p}, @code{atmega168pa}, @code{atmega168pb}, @code{atmega169}, @code{atmega169a}, @code{atmega169p}, @code{atmega169pa}, @code{atmega32}, @code{atmega32a}, @code{atmega32c1}, @code{atmega32hvb}, @code{atmega32hvbrevb}, @code{atmega32m1}, @code{atmega32u4}, @code{atmega32u6}, @code{atmega323}, @code{atmega324a}, @code{atmega324p}, @code{atmega324pa}, @code{atmega325}, @code{atmega325a}, @code{atmega325p}, @code{atmega325pa}, @code{atmega3250}, @code{atmega3250a}, @code{atmega3250p}, @code{atmega3250pa}, @code{atmega328}, @code{atmega328p}, @code{atmega329}, @code{atmega329a}, @code{atmega329p}, @code{atmega329pa}, @code{atmega3290}, @code{atmega3290a}, @code{atmega3290p}, @code{atmega3290pa}, @code{atmega406}, @code{atmega64}, @code{atmega64a}, @code{atmega64c1}, @code{atmega64hve}, @code{atmega64hve2}, @code{atmega64m1}, @code{atmega64rfr2}, @code{atmega640}, @code{atmega644}, @code{atmega644a}, @code{atmega644p}, @code{atmega644pa}, @code{atmega644rfr2}, @code{atmega645}, @code{atmega645a}, @code{atmega645p}, @code{atmega6450}, @code{atmega6450a}, @code{atmega6450p}, @code{atmega649}, @code{atmega649a}, @code{atmega649p}, @code{atmega6490}, @code{atmega6490a}, @code{atmega6490p}, @code{at90can32}, @code{at90can64}, @code{at90pwm161}, @code{at90pwm216}, @code{at90pwm316}, @code{at90scr100}, @code{at90usb646}, @code{at90usb647}, @code{at94k}, @code{m3000}.
  
  @item avr51
  ``Enhanced'' devices with 128@tie{}KiB of program memory.
@@ -5170,10 +5312,6 @@ index b1313c4..45d3b9a 100644
  ``Enhanced'' devices with 3-byte PC, i.e.@: with more than 128@tie{}KiB of program memory.
 -@*@var{mcu}@tie{}= @code{atmega2560}, @code{atmega2561}.
 +@*@var{mcu}@tie{}= @code{atmega256rfr2}, @code{atmega2560}, @code{atmega2561}, @code{atmega2564rfr2}.
-+
-+@item avr7
-+``Enhanced'' devices with 20@tie{}KiB of program memory starts at 0x8000.
-+@*@var{mcu}@tie{}= @code{ata5782}, @code{ata5831}.
  
  @item avrxmega2
  ``XMEGA'' devices with more than 8@tie{}KiB and up to 64@tie{}KiB of program memory.
@@ -5182,7 +5320,7 @@ index b1313c4..45d3b9a 100644
  
  @item avrxmega4
  ``XMEGA'' devices with more than 64@tie{}KiB and up to 128@tie{}KiB of program memory.
-@@ -62,12 +66,16 @@
+@@ -62,12 +62,16 @@
  
  @item avrxmega6
  ``XMEGA'' devices with more than 128@tie{}KiB of program memory.
@@ -5201,10 +5339,25 @@ index b1313c4..45d3b9a 100644
  This ISA is implemented by the minimal AVR core and supported for assembler only.
  @*@var{mcu}@tie{}= @code{attiny11}, @code{attiny12}, @code{attiny15}, @code{attiny28}, @code{at90s1200}.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index a3e2ee0..361de1d 100644
+index a3e2ee0..e37551a 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
-@@ -11936,6 +11936,9 @@ instructions because of a hardware erratum.  Skip instructions are
+@@ -11867,6 +11867,14 @@ the device name as from the AVR user manual. The difference between
+ If @var{device} is not a device but only a core architecture like
+ @code{avr51}, this macro will not be defined.
+ 
++@item   __AVR_DEVICE_NAME__
++Setting @code{-mmcu=@var{device}} defines this built-in macro to
++the device's name. For example, with @code{-mmcu=atmega8} the macro
++will be defined to @code{atmega8}.
++
++If @var{device} is not a device but only a core architecture like
++@code{avr51}, this macro will not be defined.
++
+ @item __AVR_XMEGA__
+ The device / architecture belongs to the XMEGA family of devices.
+ 
+@@ -11936,6 +11944,9 @@ instructions because of a hardware erratum.  Skip instructions are
  The second macro is only defined if @code{__AVR_HAVE_JMP_CALL__} is also
  set.
  
@@ -8309,6 +8462,55 @@ index 0000000..51be22b
 +
 +void __attribute__((nmi)) nmi_fun() /* { dg-warning "'nmi_fun' appears to be a misspelled nmi handler" } */
 +{}
+diff --git a/gcc/testsuite/gcc.target/avr/pr52472.c b/gcc/testsuite/gcc.target/avr/pr52472.c
+new file mode 100644
+index 0000000..701cfb4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr52472.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-Os -g -Wno-pointer-to-int-cast" } */
++
++/* This testcase exposes PR52472. expand_debug_expr mistakenly
++   considers the address space of data to be generic, and
++   asserts that PSImode pointers aren't valid in the generic 
++   address space. */
++
++extern const __memx unsigned data[][10];
++
++unsigned long ice (void)
++{
++  unsigned long addr32;
++
++  return addr32 = ((unsigned long) data);
++}
+diff --git a/gcc/testsuite/gcc.target/avr/pr60991.c b/gcc/testsuite/gcc.target/avr/pr60991.c
+new file mode 100644
+index 0000000..a09f42a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr60991.c
+@@ -0,0 +1,21 @@
++/* { dg-do run } */
++/* { dg-options "-O1" } */
++
++/* This testcase (simplified from the original bug report) exposes 
++   PR60991. The code generated for writing the __int24 value corrupts
++   the frame pointer if the offset is <= 63 + MAX_LD_OFFSET */
++
++#include <stdlib.h>
++
++int main(void)
++{
++    volatile char junk[62];
++    junk[0] = 5;
++    volatile __int24 staticConfig = 0;
++
++    if (junk[0] != 5)
++      abort();
++
++    exit(0);
++    return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/avr/progmem-error-1.cpp b/gcc/testsuite/gcc.target/avr/progmem-error-1.cpp
 index cf53cc8..934b93c 100644
 --- a/gcc/testsuite/gcc.target/avr/progmem-error-1.cpp

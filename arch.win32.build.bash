@@ -9,5 +9,5 @@ for folder in avr/bin bin libexec/gcc/avr/4.8.1/
 do
 	cp /c/MinGW/bin/libiconv-2.dll $folder
 done
-zip -r -9 ../avr-toolchain-win32-3.4.4.zip .
+zip -r -9 ../avr-toolchain-win32-3.4.5.zip .
 

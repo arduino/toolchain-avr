@@ -17,21 +17,21 @@ then
 	wget http://download.savannah.gnu.org/releases/avr-libc/avr-libc-1.8.0.tar.bz2
 fi
 
-tar xfjv avr-libc-1.8.0.tar.bz2
+tar xfv avr-libc-1.8.0.tar.bz2
 
 cd avr-libc-1.8.0
-for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
+for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
 cd -
 
-if [[ ! -f avr8-headers-6.2.0.334.zip ]] ;
+if [[ ! -f avr8-headers-6.2.0.469.zip ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.4/avr8-headers-6.2.0.334.zip
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.5/avr8-headers-6.2.0.469.zip
 fi
 
-unzip avr8-headers-6.2.0.334.zip
-mv avr avr8-headers-6.2.0.334
+unzip avr8-headers-6.2.0.469.zip
+mv avr avr8-headers-6.2.0.469
 
-for i in avr8-headers-6.2.0.334/io[0-9a-zA-Z]*.h
+for i in avr8-headers-6.2.0.469/io[0-9a-zA-Z]*.h
 do
 	cp -v -f $i avr-libc-1.8.0/include/avr/
 done

@@ -17,7 +17,7 @@ then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.24.tar.bz2
 fi
 
-tar xfjv binutils-2.24.tar.bz2
+tar xfv binutils-2.24.tar.bz2
 
 cd binutils-2.24
 for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
@@ -50,8 +50,6 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS all-bfd TARGET-bfd=headers
-rm bfd/Makefile
 nice -n 10 make -j $MAKE_JOBS configure-host
 nice -n 10 make -j $MAKE_JOBS all
 

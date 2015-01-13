@@ -17,28 +17,28 @@ then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/gmp/gmp-5.0.2.tar.bz2
 fi
 
-tar xfjv gmp-5.0.2.tar.bz2
+tar xfv gmp-5.0.2.tar.bz2
 
 if [[ ! -f mpfr-3.0.0.tar.bz2  ]] ;
 then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/mpfr/mpfr-3.0.0.tar.bz2
 fi
 
-tar xfjv mpfr-3.0.0.tar.bz2
+tar xfv mpfr-3.0.0.tar.bz2
 
 if [[ ! -f mpc-0.9.tar.gz  ]] ;
 then
 	wget http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
 fi
 
-tar xfzv mpc-0.9.tar.gz
+tar xfv mpc-0.9.tar.gz
 
 if [[ ! -f gcc-4.8.1.tar.bz2 ]] ;
 then
 	wget http://mirror.switch.ch/ftp/mirror/gnu/gcc/gcc-4.8.1/gcc-4.8.1.tar.bz2
 fi
 
-tar xfjv gcc-4.8.1.tar.bz2
+tar xfv gcc-4.8.1.tar.bz2
 
 pushd gcc-4.8.1
 for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p1 < $p; done

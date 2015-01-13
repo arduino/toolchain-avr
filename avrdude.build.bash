@@ -17,7 +17,7 @@ then
 	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-6.0.1.tar.gz
 fi
 
-tar xfzv avrdude-6.0.1.tar.gz
+tar xfv avrdude-6.0.1.tar.gz
 
 cd avrdude-6.0.1
 for p in ../avrdude-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
