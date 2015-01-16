@@ -48,6 +48,7 @@ You also need to install MinGW: http://www.mingw.org/. Once you have run mingw-g
 - mingw32-base
 - mingw32-gcc-g++
 - msys-base
+- msys-zip
 
 ### Upstream credits
 
