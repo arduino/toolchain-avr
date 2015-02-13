@@ -1,12 +1,29 @@
-Note: setup has been done on partially set up development machines. If, trying to compile on your machine, you find any package missing from the following list, please open an issue at once! We all can't afford wasting time on setup :)
+## AVR Toolchain for Arduino
 
-### Debian requirements
+This is the AVR Toolchain used in the [Arduino IDE](http://arduino.cc/).
+
+As soon as Atmel [ships a newer toolchain](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/), we pull the source code, **patch it** with some user contributed patches and deliver it with the [Arduino IDE](http://arduino.cc/).
+Therefore, the resulting binaries may differ significantly from Atmel's. And you should start blaming us if things are not working as expected :)
+
+Latest toolchain available is based on Atmel 3.4.5 version. It contains:
+ - binutils-2.24
+ - gcc-4.8.1
+ - avr-libc-1.8.0
+ - libusb-win32-bin-1.2.6.0 (Windows only)
+ - libusb-1.0.18 and libusb-compat-0.1.5 (Linux and Mac OS X)
+ - avrdude-6.0.1
+ - gdb-7.8
+
+### Building
+Setup has been done on partially set up development machines. If, trying to compile on your machine, you find any package missing from the following list, please open an issue at once! We all can't afford wasting time on setup :)
+
+#### Debian requirements
 
 ```bash
 sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev libtinfo-dev
 ```
 
-### Mac OSX requirements
+#### Mac OSX requirements
 
 You need to install MacPorts: https://www.macports.org/install.php. Once done, open a terminal and type:
 
@@ -20,7 +37,7 @@ sudo port install gpatch +universal
 sudo port install libusb +universal
 ```
 
-### Windows requirements
+#### Windows requirements
 
 You need to install Cygwin: http://www.cygwin.com/. Once you have run `setup-x86.exe`, use the `Search` text field to filter and select for installation the following packages:
 
@@ -60,5 +77,5 @@ Consult the [list of contributors](https://github.com/arduino/toolchain-avr/grap
 
 ### License
 
-The bash scripts are GPLv2 licensed. Every other software used by these bash scripts has its own license. Consult them to know their terms.
+The bash scripts are GPLv2 licensed. Every other software used by these bash scripts has its own license. Consult them to know the terms.
 
