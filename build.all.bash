@@ -15,10 +15,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-rm -rf objdir toolsdir
+rm -rf toolsdir avr avrdude-6.0.1
 
 ./clean.bash
 ./tools.bash
+./clean.bash
+
+rm -rf objdir*
+
 ./clean.bash
 ./binutils.build.bash
 ./clean.bash
@@ -26,10 +30,18 @@ rm -rf objdir toolsdir
 ./clean.bash
 ./avr-libc.build.bash
 ./clean.bash
+./gdb.build.bash
+./clean.bash
+
+mv objdir avr
+
+mkdir objdir
+
+./clean.bash
 ./libusb.build.bash
 ./clean.bash
 ./avrdude.build.bash
 ./clean.bash
-./gdb.build.bash
-./clean.bash
+
+mv objdir avrdude-6.0.1
 

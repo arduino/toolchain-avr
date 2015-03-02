@@ -17,7 +17,9 @@
 
 ./build.all.bash
 
-rm -f avr-toolchain-*.zip
-cd objdir
-zip -r -9 ../avr-toolchain-linux64-3.4.5.zip .
+rm -f *arduino*.tar.bz2
+
+tar -cjvf avr-gcc-4.8.1-arduino2-x86_64-pc-linux-gnu.tar.bz2 avr/
+
+tar -cjvf avrdude-6.0.1-arduino2-x86_64-pc-linux-gnu.tar.bz2 avrdude-6.0.1/
 

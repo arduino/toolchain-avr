@@ -18,7 +18,15 @@
 export PATH=$PATH:/c/MinGW/bin/:/c/cygwin/bin/
 CFLAGS="-DWIN32 -static" CXXFLAGS="-DWIN32 -static" LDFLAGS="-DWIN32 -static" CC="mingw32-gcc -m32" CXX="mingw32-g++ -m32" ./build.all.bash
 
-rm -f avr-toolchain-*.zip
-cd objdir
-zip -r -9 ../avr-toolchain-win32-3.4.5-arduino1.zip .
+cd avr
+for folder in avr/bin bin libexec/gcc/avr/4.8.1/
+do
+	cp /c/MinGW/bin/libiconv-2.dll $folder
+done
+
+rm -f *arduino*.tar.bz2
+
+tar -cjvf avr-gcc-4.8.1-arduino2-i686-mingw32.tar.bz2 avr/
+
+tar -cjvf avrdude-6.0.1-arduino2-i686-mingw32.tar.bz2 avrdude-6.0.1/
 
