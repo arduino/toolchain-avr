@@ -20,7 +20,7 @@ Setup has been done on partially set up development machines. If, trying to comp
 #### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev libtinfo-dev
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev libtinfo-dev pkg-config
 ```
 
 #### Mac OSX requirements
