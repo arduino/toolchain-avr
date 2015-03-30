@@ -88,6 +88,7 @@ CONFARGS=" \
 	--disable-libssp \
         --disable-libada \
 	--disable-shared \
+	--enable-lto \
         --with-avrlibc=yes \
 	--with-dwarf2 \
         --disable-doc \
