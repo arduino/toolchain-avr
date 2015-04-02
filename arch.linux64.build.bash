@@ -19,7 +19,7 @@ CFLAGS="-static" CXXFLAGS="-static" LDFLAGS="-static" ./build.all.bash
 
 rm -f *arduino*.tar.bz2 *arduino*.zip
 
-tar -cjvf ./avr-gcc-4.8.1-arduino2-x86_64-pc-linux-gnu.tar.bz2 avr/
+tar -cjvf ./avr-gcc-4.8.1-arduino3-x86_64-pc-linux-gnu.tar.bz2 avr/
 
-tar -cjvf ./avrdude-6.0.1-arduino2-x86_64-pc-linux-gnu.tar.bz2 avrdude-6.0.1/
+tar -cjvf ./avrdude-6.0.1-arduino3-x86_64-pc-linux-gnu.tar.bz2 avrdude-6.0.1/
 
