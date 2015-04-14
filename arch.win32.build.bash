@@ -20,7 +20,7 @@ CFLAGS="-DWIN32 -static" CXXFLAGS="-DWIN32 -static" LDFLAGS="-DWIN32 -static" CC
 
 rm -f *arduino*.tar.bz2 *arduino*.zip
 
-zip -r -9 ./avr-gcc-4.8.1-arduino3-i686-mingw32.zip avr/
+zip -r -9 ./avr-gcc-4.8.1-arduino4-i686-mingw32.zip avr/
 
-zip -r -9 ./avrdude-6.0.1-arduino3-i686-mingw32.zip avrdude-6.0.1/
+zip -r -9 ./avrdude-6.0.1-arduino4-i686-mingw32.zip avrdude-6.0.1/
 
