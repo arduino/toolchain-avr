@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-CFLAGS="-static" CXXFLAGS="-static" LDFLAGS="-static" CC="gcc -m32" CXX="g++ -m32" ./build.all.bash
+CC="gcc -m32" CXX="g++ -m32" ./build.all.bash
 
 rm -f *arduino*.tar.bz2 *arduino*.zip
 
