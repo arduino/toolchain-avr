@@ -79,7 +79,17 @@ then
 		--enable-arduinotre"
 fi
 
-CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS
+CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS > avrdude.configure.output
+
+cat avrdude.configure.output
+HASLIBUSB=`grep "DON'T HAVE libusb" avrdude.configure.output || echo`
+HASLIBUSB1=`grep "DON'T HAVE libusb_1_0" avrdude.configure.output || echo`
+rm avrdude.configure.output
+
+if [[ "x$HASLIBUSB" != "x" || "x$HASLIBUSB1" != "x" ]]; then
+	echo "avrdude missing libusb support"
+	exit 1
+fi
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
