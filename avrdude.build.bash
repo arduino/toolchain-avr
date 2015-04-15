@@ -82,13 +82,22 @@ fi
 CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS > avrdude.configure.output
 
 cat avrdude.configure.output
-HASLIBUSB=`grep "DON'T HAVE libusb" avrdude.configure.output || echo`
-HASLIBUSB1=`grep "DON'T HAVE libusb_1_0" avrdude.configure.output || echo`
+DOESNTHAVELIBUSB="DON'T HAVE libusb"
+DOESNTHAVELIBUSB1="DON'T HAVE libusb_1_0"
+CHECKLIBUSB=`grep "DON'T HAVE libusb" avrdude.configure.output || echo`
+CHECKLIBUSB1=`grep "DON'T HAVE libusb_1_0" avrdude.configure.output || echo`
 rm avrdude.configure.output
 
-if [[ "x$HASLIBUSB" != "x" || "x$HASLIBUSB1" != "x" ]]; then
-	echo "avrdude missing libusb support"
-	exit 1
+if [[ `uname -s` == CYGWIN* || `uname -s` == MINGW* ]]; then
+	if [[ "$CHECKLIBUSB" == "$DOESNTHAVELIBUSB" && "$CHECKLIBUSB1" == "$DOESNTHAVELIBUSB1" ]]; then
+		echo "avrdude missing libusb support"
+		exit 1
+	fi
+else
+	if [[ "$CHECKLIBUSB" == "$DOESNTHAVELIBUSB" || "$CHECKLIBUSB1" == "$DOESNTHAVELIBUSB1" ]]; then
+		echo "avrdude missing libusb support"
+		exit 1
+	fi
 fi
 
 if [ -z "$MAKE_JOBS" ]; then
