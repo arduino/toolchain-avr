@@ -24,7 +24,7 @@ if [[ `uname -s` == CYGWIN* || `uname -s` == MINGW* ]]
 then
 	if [[ ! -f libusb-win32-bin-1.2.6.0.zip  ]] ;
 	then
-		wget http://switch.dl.sourceforge.net/project/libusb-win32/libusb-win32-releases/1.2.6.0/libusb-win32-bin-1.2.6.0.zip
+		wget http://download.sourceforge.net/project/libusb-win32/libusb-win32-releases/1.2.6.0/libusb-win32-bin-1.2.6.0.zip
 	fi
 
 	mkdir -p tmp
@@ -43,7 +43,7 @@ if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
 	if [[ ! -f libusb-1.0.18.tar.bz2  ]] ;
 	then
-		wget http://switch.dl.sourceforge.net/project/libusb/libusb-1.0/libusb-1.0.18/libusb-1.0.18.tar.bz2
+		wget http://download.sourceforge.net/project/libusb/libusb-1.0/libusb-1.0.18/libusb-1.0.18.tar.bz2
 	fi
 
 	tar xfv libusb-1.0.18.tar.bz2
@@ -71,7 +71,7 @@ then
 
 	if [[ ! -f libusb-compat-0.1.5.tar.bz2  ]] ;
 	then
-		wget http://switch.dl.sourceforge.net/project/libusb/libusb-compat-0.1/libusb-compat-0.1.5/libusb-compat-0.1.5.tar.bz2
+		wget http://download.sourceforge.net/project/libusb/libusb-compat-0.1/libusb-compat-0.1.5/libusb-compat-0.1.5.tar.bz2
 	fi
 
 	tar xfv libusb-compat-0.1.5.tar.bz2
