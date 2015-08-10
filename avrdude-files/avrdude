@@ -1,4 +1,6 @@
 #!/bin/bash
 
 export LD_LIBRARY_PATH="`dirname "$0"`/../lib/"
+# Workaround for macosx gatekeeper, see https://github.com/arduino/Arduino/issues/3468
+chmod +x "`dirname "$0"`/avrdude_bin"
 exec -a "$0" "`dirname "$0"`/avrdude_bin" "$@"
