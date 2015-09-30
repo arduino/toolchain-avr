@@ -27,19 +27,15 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f avrdude-6.0.1.tar.gz  ]] ;
+if [[ ! -f avrdude-6.1.tar.gz  ]] ;
 then
-	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-6.0.1.tar.gz
+	wget http://download.savannah.gnu.org/releases/avrdude/avrdude-6.1.tar.gz
 fi
 
-tar xfv avrdude-6.0.1.tar.gz
+tar xfv avrdude-6.1.tar.gz
 
-cd avrdude-6.0.1
+cd avrdude-6.1
 for p in ../avrdude-patches/*.patch; do echo Applying $p; patch -p0 < $p; done
-if [[ `uname -s` != CYGWIN* && `uname -s` != MINGW* ]]
-then
-	for p in ../avrdude-patches/*.patch.optional; do echo Applying $p; patch -p0 < $p; done
-fi
 ./bootstrap
 cd -
 
@@ -61,9 +57,9 @@ fi
 
 if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
-	CFLAGS="$CFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
-	CXXFLAGS="$CXXFLAGS -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
-	LDFLAGS="$LDFLAGS -I$PREFIX/include -I$PREFIX/include -L$PREFIX/lib"
+	CFLAGS="$CFLAGS -DHAVE_STDINT_H -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	CXXFLAGS="$CXXFLAGS -DHAVE_STDINT_H -I$PREFIX/include -I$PREFIX/include/libusb-1.0/ -L$PREFIX/lib"
+	LDFLAGS="$LDFLAGS -L$PREFIX/lib"
 fi
 
 mkdir -p avrdude-build
@@ -71,15 +67,10 @@ cd avrdude-build
 
 CONFARGS=" \
 	--prefix=$PREFIX \
-	--enable-linuxgpio"
+	--enable-linuxgpio \
+	--disable-parport"
 
-if [[ `uname -s` != CYGWIN* && `uname -s` != MINGW* ]]
-then
-	CONFARGS="$CONFARGS \
-		--enable-arduinotre"
-fi
-
-CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.0.1/configure $CONFARGS > avrdude.configure.output
+CFLAGS="-w -O2 $CFLAGS" CXXFLAGS="-w -O2 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avrdude-6.1/configure $CONFARGS > avrdude.configure.output
 
 cat avrdude.configure.output
 DOESNTHAVELIBUSB="DON'T HAVE libusb"

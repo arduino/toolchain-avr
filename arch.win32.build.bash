@@ -16,11 +16,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 export PATH=$PATH:/c/MinGW/bin/:/c/cygwin/bin/
-CFLAGS="-DWIN32 -static" CXXFLAGS="-DWIN32 -static" LDFLAGS="-DWIN32 -static" CC="mingw32-gcc -m32" CXX="mingw32-g++ -m32" ./build.all.bash
+MAKE_JOBS=1 CFLAGS="-DWIN32 -static" CXXFLAGS="-DWIN32 -static" LDFLAGS="-DWIN32 -static" CC="mingw32-gcc -m32" CXX="mingw32-g++ -m32" ./build.all.bash
 
 rm -f *arduino*.tar.bz2 *arduino*.zip
 
-zip -r -9 ./avr-gcc-4.8.1-arduino5-i686-mingw32.zip avr/
+zip -r -9 ./avr-gcc-4.9.2-arduino2-i686-mingw32.zip avr/
 
-zip -r -9 ./avrdude-6.0.1-arduino5-i686-mingw32.zip avrdude-6.0.1/
+zip -r -9 ./avrdude-6.1-arduino2-i686-mingw32.zip avrdude-6.1/
 

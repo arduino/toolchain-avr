@@ -35,6 +35,7 @@ fi
 tar xfv gdb-7.8.tar.xz
 
 cd gdb-7.8
+find ../gdb-patches/ -name '*.patch.gz' -exec gunzip -f {} \;
 for p in ../gdb-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
 cd -
 

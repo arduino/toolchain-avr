@@ -27,14 +27,15 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f binutils-2.24.tar.bz2  ]] ;
+if [[ ! -f binutils-2.25.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.24.tar.bz2
+	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.25.tar.bz2
 fi
 
-tar xfv binutils-2.24.tar.bz2
+tar xfv binutils-2.25.tar.bz2
 
-cd binutils-2.24
+cd binutils-2.25
+find ../binutils-patches/ -name '*.patch.gz' -exec gunzip -f {} \;
 for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
 autoconf
 cd ld
@@ -57,9 +58,13 @@ CONFARGS=" \
 	--disable-werror \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
+	--disable-gdb \
+	--disable-libdecnumber \
+	--disable-readline \
+	--disable-sim \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.24/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.25/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

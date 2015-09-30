@@ -38,15 +38,15 @@ cd avr-libc-1.8.0
 for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
 cd -
 
-if [[ ! -f avr8-headers-6.2.0.469.zip ]] ;
+if [[ ! -f avr8-headers.zip ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.5/avr8-headers-6.2.0.469.zip
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.0/avr8-headers.zip
 fi
 
-unzip avr8-headers-6.2.0.469.zip
-mv avr avr8-headers-6.2.0.469
+unzip avr8-headers.zip
+mv avr avr8-headers
 
-for i in avr8-headers-6.2.0.469/io[0-9a-zA-Z]*.h
+for i in avr8-headers/io[0-9a-zA-Z]*.h
 do
 	cp -v -f $i avr-libc-1.8.0/include/avr/
 done
@@ -66,7 +66,9 @@ cd avr-libc-build
 CONFARGS=" \
 	--prefix=$PREFIX \
 	--host=avr \
-	--disable-doc"
+	--enable-device-lib \
+	--disable-doc \
+	--disable-versioned-doc"
 
 PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc-1.8.0/configure $CONFARGS
 

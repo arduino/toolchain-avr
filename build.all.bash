@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-rm -rf toolsdir avr avrdude-6.0.1
+rm -rf toolsdir avr avrdude-6.1
 
 ./clean.bash
 ./tools.bash
@@ -33,6 +33,19 @@ rm -rf objdir*
 ./gdb.build.bash
 ./clean.bash
 
+if [ -z "$EXECUTABLE_FIND_FILTER" ]; then
+	EXECUTABLE_FIND_FILTER="-executable"
+fi
+
+cd objdir
+find bin/ -type f $EXECUTABLE_FIND_FILTER -exec strip {} \;
+if [ -e "libexec" ]; then
+	find libexec/ -type f $EXECUTABLE_FIND_FILTER -exec strip {} \;
+	find libexec/ -type f -name '*.a' -exec strip {} \;
+fi
+find avr/lib lib/gcc/avr -type f -name '*.a' -exec bin/avr-strip --strip-debug {} \;
+cd -
+
 mv objdir avr
 
 mkdir objdir
@@ -43,5 +56,5 @@ mkdir objdir
 ./avrdude.build.bash
 ./clean.bash
 
-mv objdir avrdude-6.0.1
+mv objdir avrdude-6.1
 
