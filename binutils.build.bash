@@ -73,5 +73,5 @@ fi
 nice -n 10 make -j $MAKE_JOBS configure-host
 nice -n 10 make -j $MAKE_JOBS all
 
-make install
+make install -j $MAKE_JOBS
 

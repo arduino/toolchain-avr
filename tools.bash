@@ -43,7 +43,7 @@ CONFARGS="--prefix=$TOOLS_PATH"
 
 nice -n 10 make -j $MAKE_JOBS
 
-make install
+make install -j $MAKE_JOBS
 
 cd -
 
@@ -64,7 +64,7 @@ CONFARGS="--prefix=$TOOLS_PATH"
 
 nice -n 10 make -j $MAKE_JOBS
 
-make install
+make install -j $MAKE_JOBS
 
 cd -
 
