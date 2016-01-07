@@ -61,7 +61,7 @@ then
 
 	nice -n 10 make -j 1
 
-	make install
+	make install -j $MAKE_JOBS
 
 	cd ..
 
@@ -84,5 +84,5 @@ then
 
 	nice -n 10 make -j 1
 
-	make install
+	make install -j $MAKE_JOBS
 fi

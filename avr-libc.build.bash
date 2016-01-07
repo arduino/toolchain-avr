@@ -80,5 +80,5 @@ fi
 
 PATH=$PREFIX/bin:$PATH nice -n 10 make -j $MAKE_JOBS
 
-PATH=$PREFIX/bin:$PATH make install
+PATH=$PREFIX/bin:$PATH make install -j $MAKE_JOBS
 

@@ -17,20 +17,24 @@
 
 rm -rf toolsdir avr avrdude-6.1
 
+if [[ `nproc` > "2" ]]; then
+    JOBS=$((`nproc`+1))
+fi
+
 ./clean.bash
-./tools.bash
+MAKE_JOBS="$JOBS" ./tools.bash
 ./clean.bash
 
 rm -rf objdir*
 
 ./clean.bash
-./binutils.build.bash
+MAKE_JOBS="$JOBS" ./binutils.build.bash
 ./clean.bash
-./gcc.build.bash
+MAKE_JOBS="$JOBS" ./gcc.build.bash
 ./clean.bash
-./avr-libc.build.bash
+MAKE_JOBS="$JOBS" ./avr-libc.build.bash
 ./clean.bash
-./gdb.build.bash
+MAKE_JOBS="$JOBS" ./gdb.build.bash
 ./clean.bash
 
 if [ -z "$EXECUTABLE_FIND_FILTER" ]; then
@@ -51,9 +55,9 @@ mv objdir avr
 mkdir objdir
 
 ./clean.bash
-./libusb.build.bash
+MAKE_JOBS="$JOBS" ./libusb.build.bash
 ./clean.bash
-./avrdude.build.bash
+MAKE_JOBS="$JOBS" ./avrdude.build.bash
 ./clean.bash
 
 mv objdir avrdude-6.1
