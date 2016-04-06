@@ -29,7 +29,7 @@ export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f avr-libc-1.8.0.tar.bz2 ]] ;
 then
-	wget http://download.savannah.gnu.org/releases/avr-libc/avr-libc-1.8.0.tar.bz2
+	wget http://download.savannah.gnu.org/releases/avr-libc/old-releases/avr-libc-1.8.0.tar.bz2
 fi
 
 tar xfv avr-libc-1.8.0.tar.bz2
