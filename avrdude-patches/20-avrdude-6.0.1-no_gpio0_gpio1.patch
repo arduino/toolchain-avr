@@ -1,8 +1,0 @@
-Index: linuxgpio.c
-===================================================================
---- linuxgpio.c
-+++ linuxgpio.c
-260c260
-<   for (i=0; i<N_PINS; i++) {
----
->   for (i=2; i<N_PINS; i++) {
