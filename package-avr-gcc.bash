@@ -50,6 +50,7 @@ elif [[ $OS == "Msys" || $OS == "Cygwin" ]] ; then
   export CFLAGS="-DWIN32 -static"
   export CXXFLAGS="-DWIN32 -static"
   export LDFLAGS="-DWIN32 -static"
+  export MAKE_JOBS=1
   OUTPUT_TAG=i686-mingw32
 
 elif [[ $OS == "Darwin" ]] ; then
