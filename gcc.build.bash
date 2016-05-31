@@ -48,27 +48,26 @@ fi
 
 tar xfv mpc-0.9.tar.gz
 
-if [[ ! -f gcc-4.8.1.tar.bz2 ]] ;
+if [[ ! -f avr-gcc.tar.bz2 ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/gcc/gcc-4.8.1/gcc-4.8.1.tar.bz2
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-gcc.tar.bz2
 fi
 
-tar xfv gcc-4.8.1.tar.bz2
+tar xfv avr-gcc.tar.bz2
 
-pushd gcc-4.8.1
-for p in ../gcc-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
-pushd gcc/config/avr/
-sh genopt.sh avr-mcus.def > avr-tables.opt
-cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
-popd
+pushd gcc
+#pushd gcc/config/avr/
+#sh genopt.sh avr-mcus.def > avr-tables.opt
+#cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
+#popd
 pushd gcc
 autoconf
 popd
 popd
 
-mv gmp-5.0.2 gcc-4.8.1/gmp
-mv mpfr-3.0.0 gcc-4.8.1/mpfr
-mv mpc-0.9 gcc-4.8.1/mpc
+mv gmp-5.0.2 gcc/gmp
+mv mpfr-3.0.0 gcc/mpfr
+mv mpc-0.9 gcc/mpc
 
 mkdir -p objdir
 cd objdir
@@ -100,7 +99,7 @@ then
 	LDFLAGS="$LDFLAGS -L/usr/lib"
 fi
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc-4.8.1/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

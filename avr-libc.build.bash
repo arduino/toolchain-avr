@@ -27,31 +27,31 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f avr-libc-1.8.0.tar.bz2 ]] ;
+if [[ ! -f avr-libc.tar.bz2 ]] ;
 then
-	wget http://download.savannah.gnu.org/releases/avr-libc/old-releases/avr-libc-1.8.0.tar.bz2
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-libc.tar.bz2
 fi
 
-tar xfv avr-libc-1.8.0.tar.bz2
+tar xfv avr-libc.tar.bz2
 
-cd avr-libc-1.8.0
-for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
+cd libc/avr-libc
+for p in ../../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
 cd -
 
-if [[ ! -f avr8-headers-6.2.0.469.zip ]] ;
+if [[ ! -f avr8-headers.zip ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.4.5/avr8-headers-6.2.0.469.zip
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr8-headers.zip
 fi
 
-unzip avr8-headers-6.2.0.469.zip
-mv avr avr8-headers-6.2.0.469
+unzip avr8-headers.zip
+mv avr avr8-headers
 
-for i in avr8-headers-6.2.0.469/io[0-9a-zA-Z]*.h
+for i in avr8-headers/io[0-9a-zA-Z]*.h
 do
-	cp -v -f $i avr-libc-1.8.0/include/avr/
+	cp -v -f $i libc/avr-libc/include/avr/
 done
 
-cd avr-libc-1.8.0
+cd libc/avr-libc
 ./bootstrap
 cd -
 
@@ -68,7 +68,7 @@ CONFARGS=" \
 	--host=avr \
 	--disable-doc"
 
-PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc-1.8.0/configure $CONFARGS
+PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../libc/avr-libc/configure $CONFARGS
 
 for p in ../avr-libc-patches/*.patch.post.automake; do echo Applying $p; patch -p1 < $p; done
 

@@ -5,22 +5,20 @@ This is the AVR Toolchain used in the [Arduino IDE](http://arduino.cc/).
 As soon as Atmel [ships a newer toolchain](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/), we pull the source code, **patch it** with some user contributed patches and deliver it with the [Arduino IDE](http://arduino.cc/).
 Therefore, the resulting binaries may differ significantly from Atmel's. And you should start blaming us if things are not working as expected :)
 
-Latest toolchain available is based on Atmel 3.4.5 version. It contains:
- - binutils-2.24
- - gcc-4.8.1
- - avr-libc-1.8.0
- - libusb-win32-bin-1.2.6.0 (Windows only)
- - libusb-1.0.18 and libusb-compat-0.1.5 (Linux and Mac OS X)
- - avrdude-6.0.1
+Latest toolchain available is based on Atmel 3.5.2 version. It contains:
+ - binutils-2.26
+ - gcc-4.9.2
+ - avr-libc-2.0.0
  - gdb-7.8
 
 ### Building
+
 Setup has been done on partially set up development machines. If, trying to compile on your machine, you find any package missing from the following list, please open an issue at once! We all can't afford wasting time on setup :)
 
 #### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libusb-dev libusb-1.0-0-dev libtinfo-dev pkg-config
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config
 ```
 
 #### Mac OSX requirements
@@ -34,7 +32,6 @@ sudo port install wget +universal
 sudo port install automake +universal
 sudo port install autoconf +universal
 sudo port install gpatch +universal
-sudo port install libusb +universal
 ```
 
 #### Windows requirements

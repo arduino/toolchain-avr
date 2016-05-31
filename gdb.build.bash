@@ -27,16 +27,12 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f gdb-7.8.tar.xz  ]] ;
+if [[ ! -f avr-gdb.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/gdb/gdb-7.8.tar.xz
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-gdb.tar.bz2
 fi
 
-tar xfv gdb-7.8.tar.xz
-
-cd gdb-7.8
-for p in ../gdb-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
-cd -
+tar xfv avr-gdb.tar.bz2
 
 mkdir -p objdir
 cd objdir
@@ -53,7 +49,7 @@ CONFARGS=" \
 	--disable-binutils \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb-7.8/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

@@ -18,9 +18,6 @@
 export PATH=$PATH:/c/MinGW/bin/:/c/cygwin/bin/
 CFLAGS="-DWIN32 -static" CXXFLAGS="-DWIN32 -static" LDFLAGS="-DWIN32 -static" CC="mingw32-gcc -m32" CXX="mingw32-g++ -m32" ./build.all.bash
 
-rm -f *arduino*.tar.bz2 *arduino*.zip
-
-zip -r -9 ./avr-gcc-4.8.1-arduino5-i686-mingw32.zip avr/
-
-zip -r -9 ./avrdude-6.0.1-arduino5-i686-mingw32.zip avrdude-6.0.1/
+rm -f avr-gcc-4.9.2-arduino-i686-mingw32.zip
+zip -r -9 avr-gcc-4.9.2-arduino-i686-mingw32.zip avr/
 

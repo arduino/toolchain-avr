@@ -27,15 +27,14 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f binutils-2.26.tar.bz2  ]] ;
+if [[ ! -f avr-binutils.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/binutils/binutils-2.26.tar.bz2
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-binutils.tar.bz2
 fi
+tar xfv avr-binutils.tar.bz2
 
-tar xfv binutils-2.26.tar.bz2
-
-cd binutils-2.26
-for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
+cd binutils
+#for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
 autoconf
 cd ld
 autoreconf
@@ -59,7 +58,7 @@ CONFARGS=" \
 	--enable-install-libbfd \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.26/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

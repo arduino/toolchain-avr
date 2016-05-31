@@ -19,9 +19,6 @@ export PATH=/opt/local/libexec/gnubin/:$PATH
 
 CC="gcc -arch i386 -mmacosx-version-min=10.5" CXX="g++ -arch i386 -mmacosx-version-min=10.5" ./build.all.bash
 
-rm -f *arduino*.tar.bz2 *arduino*.zip
-
-tar -cjvf ./avr-gcc-4.8.1-arduino5-i386-apple-darwin11.tar.bz2 avr/
-
-tar -cjvf ./avrdude-6.0.1-arduino5-i386-apple-darwin11.tar.bz2 avrdude-6.0.1/
+rm -f avr-gcc-4.9.2-arduino-i386-apple-darwin11.tar.bz2
+tar -cjvf avr-gcc-4.9.2-arduino-i386-apple-darwin11.tar.bz2 avr/
 
