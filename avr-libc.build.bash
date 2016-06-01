@@ -32,7 +32,14 @@ then
 	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-libc.tar.bz2
 fi
 
-tar xfv avr-libc.tar.bz2
+if [[ $OS == "Msys" || $OS == "Cygwin" ]] ; then
+	# filename containing "aux" are not allowed in Windows environments
+	# let's just exclude it since it's only a test
+	EXCLUDE="--exclude=aux.c"
+else
+	EXCLUDE=""
+fi
+tar xfv avr-libc.tar.bz2 $EXCLUDE
 
 cd libc/avr-libc
 for p in ../../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
