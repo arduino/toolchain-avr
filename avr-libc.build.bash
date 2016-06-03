@@ -42,7 +42,11 @@ fi
 tar xfv avr-libc.tar.bz2 $EXCLUDE
 
 cd libc/avr-libc
-for p in ../../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
+for p in ../../avr-libc-patches/*.patch
+do
+	echo Applying $p
+	patch -p1 < $p
+done
 cd -
 
 if [[ ! -f avr8-headers.zip ]] ;
@@ -77,7 +81,11 @@ CONFARGS=" \
 
 PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../libc/avr-libc/configure $CONFARGS
 
-for p in ../avr-libc-patches/*.patch.post.automake; do echo Applying $p; patch -p1 < $p; done
+for p in ../avr-libc-patches/*.patch.post.automake
+do
+	echo Applying $p
+	patch -p1 < $p
+done
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
