@@ -68,7 +68,7 @@ else
 fi
 
 rm -rf autoconf-2.64 automake-1.11.1
-rm -rf gcc gmp-5.0.2 mpc-0.9 mpfr-3.0.0 binutils libc avr8-headers gdb
+rm -rf gcc gmp-5.0.2 mpc-0.9 mpfr-3.0.0 binutils avr-libc libc avr8-headers gdb
 rm -rf toolsdir objdir *-build
 
 ./tools.bash

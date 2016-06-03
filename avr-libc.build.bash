@@ -40,9 +40,11 @@ else
 	EXCLUDE=""
 fi
 tar xfv avr-libc.tar.bz2 $EXCLUDE
+mv libc/avr-libc .
+rmdir libc
 
-cd libc/avr-libc
-for p in ../../avr-libc-patches/*.patch
+cd avr-libc
+for p in ../avr-libc-patches/*.patch
 do
 	echo Applying $p
 	patch -p1 < $p
@@ -54,15 +56,14 @@ then
 	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr8-headers.zip
 fi
 
-unzip avr8-headers.zip
-mv avr avr8-headers
+unzip avr8-headers.zip -d avr8-headers
 
-for i in avr8-headers/io[0-9a-zA-Z]*.h
+for i in avr8-headers/avr/io[0-9a-zA-Z]*.h
 do
-	cp -v -f $i libc/avr-libc/include/avr/
+	cp -v -f $i avr-libc/include/avr/
 done
 
-cd libc/avr-libc
+cd avr-libc
 ./bootstrap
 cd -
 
@@ -77,15 +78,11 @@ cd avr-libc-build
 CONFARGS=" \
 	--prefix=$PREFIX \
 	--host=avr \
+	--enable-device-lib \
+	--libdir=$PREFIX/lib \
 	--disable-doc"
 
-PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../libc/avr-libc/configure $CONFARGS
-
-for p in ../avr-libc-patches/*.patch.post.automake
-do
-	echo Applying $p
-	patch -p1 < $p
-done
+PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
