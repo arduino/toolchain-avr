@@ -56,6 +56,9 @@ CONFARGS=" \
 	--disable-werror \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
+	--enable-lto \
+	--enable-plugins\
+	--with-pic \
 	--target=avr"
 
 CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils/configure $CONFARGS
