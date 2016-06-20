@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-OUTPUT_VERSION=4.9.2-arduino2
+OUTPUT_VERSION=4.9.2-arduino3
 
 export OS=`uname -o || uname`
 export TARGET_OS=$OS
