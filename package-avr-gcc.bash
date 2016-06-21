@@ -79,8 +79,22 @@ rm -rf toolsdir objdir *-build
 
 rm -rf objdir/{info,man,share}
 
-rm -f avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.tar.bz2
-mv objdir avr
-tar -cjvf avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.tar.bz2 avr
-mv avr objdir
+# if producing a windows build, compress as zip and
+# copy *toolchain-precompiled* content to any folder containing a .exe
+[ if ${OUTPUT_TAG} == *"mingw"* ]; then
 
+  rm -f avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.zip
+  mv objdir avr
+  BINARY_FOLDERS=`find avr -name *.exe -print0 | xargs -0 -n1 dirname | sort --unique`
+  echo $BINARY_FOLDERS | xargs -n1 cp toolchain-precompiled/*
+  zip -r avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.zip avr
+  mv avr objdir
+
+else
+
+  rm -f avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.tar.bz2
+  mv objdir avr
+  tar -cjvf avr-gcc-${OUTPUT_VERSION}-${OUTPUT_TAG}.tar.bz2 avr
+  mv avr objdir
+
+fi
