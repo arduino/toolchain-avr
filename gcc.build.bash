@@ -50,7 +50,7 @@ tar xfv mpc-0.9.tar.gz
 
 if [[ ! -f avr-gcc.tar.bz2 ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-gcc.tar.bz2
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.3/avr-gcc.tar.bz2
 fi
 
 tar xfv avr-gcc.tar.bz2

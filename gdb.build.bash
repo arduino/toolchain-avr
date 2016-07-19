@@ -29,7 +29,7 @@ export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f avr-gdb.tar.bz2  ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.2/avr-gdb.tar.bz2
+	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.3/avr-gdb.tar.bz2
 fi
 
 tar xfv avr-gdb.tar.bz2
