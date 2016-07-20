@@ -26,6 +26,12 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+fi
 
 if [[ ! -f gmp-5.0.2.tar.bz2  ]] ;
 then
@@ -106,7 +112,7 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 

@@ -26,6 +26,14 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+CC=cc
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+	CC=clang
+fi
 
 if [[ ! -f binutils-2.24.tar.bz2  ]] ;
 then
@@ -59,14 +67,14 @@ CONFARGS=" \
 	--enable-install-libbfd \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.24/configure $CONFARGS
+CC=$CC CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils-2.24/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS configure-host
-nice -n 10 make -j $MAKE_JOBS all
+nice -n 10 $MAKE -j $MAKE_JOBS configure-host
+nice -n 10 $MAKE -j $MAKE_JOBS all
 
-make install
+$MAKE install
 

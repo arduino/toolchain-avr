@@ -26,6 +26,14 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+PATCHFLAGS="--binary"
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+	PATCHFLAGS=""
+fi
 
 if [[ ! -f avr-libc-1.8.0.tar.bz2 ]] ;
 then
@@ -35,7 +43,7 @@ fi
 tar xfv avr-libc-1.8.0.tar.bz2
 
 cd avr-libc-1.8.0
-for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
+for p in ../avr-libc-patches/*.patch; do echo Applying $p; patch $PATCHFLAGS -p1 < $p; done
 cd -
 
 if [[ ! -f avr8-headers-6.2.0.469.zip ]] ;
@@ -76,7 +84,7 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-PATH=$PREFIX/bin:$PATH nice -n 10 make -j $MAKE_JOBS
+PATH=$PREFIX/bin:$PATH nice -n 10 $MAKE -j $MAKE_JOBS
 
-PATH=$PREFIX/bin:$PATH make install
+PATH=$PREFIX/bin:$PATH $MAKE install
 
