@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env -S bash -ex
 # Copyright (c) 2014-2015 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
