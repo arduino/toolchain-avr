@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env -S bash -ex
 # Copyright (c) 2014-2015 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
@@ -26,6 +26,14 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+PATCHFLAGS="--binary"
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+	PATCHFLAGS=""
+fi
 
 if [[ ! -f gdb-7.8.tar.xz  ]] ;
 then
@@ -35,7 +43,7 @@ fi
 tar xfv gdb-7.8.tar.xz
 
 cd gdb-7.8
-for p in ../gdb-patches/*.patch; do echo Applying $p; patch --binary -p1 < $p; done
+for p in ../gdb-patches/*.patch; do echo Applying $p; patch $PATCHFLAGS -p1 < $p; done
 cd -
 
 mkdir -p objdir
@@ -59,7 +67,7 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 

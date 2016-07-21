@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env -S bash -ex
 # Copyright (c) 2014-2015 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
@@ -26,6 +26,12 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+fi
 
 if [[ ! -f avrdude-6.0.1.tar.gz  ]] ;
 then
@@ -104,9 +110,9 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 
 if [ `uname -s` == "Linux" ] || [ `uname -s` == "Darwin" ]
 then
