@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 # Copyright (c) 2014-2015 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+set  -ex
+
 if [[ ! -d toolsdir  ]] ;
 then
 	echo "You must first build the tools: run build_tools.bash"
@@ -26,6 +28,12 @@ TOOLS_BIN_PATH=`pwd`
 cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+fi
 
 if [[ ! -f gmp-5.0.2.tar.bz2  ]] ;
 then
@@ -110,7 +118,7 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 

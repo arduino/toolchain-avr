@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 # Copyright (c) 2014-2016 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+set -ex
 
 OUTPUT_VERSION=4.9.2-atmel3.5.3-arduino2
 
@@ -59,6 +61,10 @@ elif [[ $OS == "Darwin" ]] ; then
   export CC="gcc -arch i386 -mmacosx-version-min=10.5"
   export CXX="g++ -arch i386 -mmacosx-version-min=10.5"
   OUTPUT_TAG=i386-apple-darwin11
+
+elif [[ $OS == "FreeBSD" ]] ; then
+
+  export MACHINE=`uname -m` 
 
 else
 

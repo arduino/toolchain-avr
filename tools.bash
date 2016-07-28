@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 # Copyright (c) 2014-2015 Arduino LLC
 #
 # This program is free software; you can redistribute it and/or
@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+set -ex
+
 mkdir -p toolsdir/bin
 cd toolsdir
 TOOLS_PATH=`pwd`
@@ -23,6 +25,12 @@ TOOLS_BIN_PATH=`pwd`
 cd ../../
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
+MAKE=make
+
+if [ `uname -s` == "FreeBSD" ] ;
+then
+	MAKE=gmake
+fi
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
@@ -41,9 +49,9 @@ CONFARGS="--prefix=$TOOLS_PATH"
 
 ./configure $CONFARGS
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 
 cd -
 
@@ -62,9 +70,9 @@ CONFARGS="--prefix=$TOOLS_PATH"
 
 ./configure $CONFARGS
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 $MAKE -j $MAKE_JOBS
 
-make install
+$MAKE install
 
 cd -
 
