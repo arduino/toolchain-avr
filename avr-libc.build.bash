@@ -82,7 +82,7 @@ CONFARGS=" \
 	--libdir=$PREFIX/lib \
 	--disable-doc"
 
-PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc/configure $CONFARGS
+PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os" CXXFLAGS="-w -Os" LDFLAGS="-s $LDFLAGS" ../avr-libc/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
