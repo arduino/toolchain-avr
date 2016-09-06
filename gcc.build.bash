@@ -60,12 +60,13 @@ pushd gcc
 #sh genopt.sh avr-mcus.def > avr-tables.opt
 #cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
 #popd
-pushd gcc
-for p in ../../avr-gcc-patches/*.patch
+#pushd gcc
+for p in ../avr-gcc-patches/*.patch
 do
 	echo Applying $p
 	patch -p1 < $p
 done
+pushd gcc
 autoconf
 popd
 popd
