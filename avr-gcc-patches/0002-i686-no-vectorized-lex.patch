@@ -1,0 +1,11 @@
+--- ./libcpp/lex.c.orig	2016-09-07 16:10:17.563531580 +0200
++++ ./libcpp/lex.c	2016-09-07 16:16:32.653889905 +0200
+@@ -272,7 +272,7 @@
+    extensions used, so SSE4.2 executables cannot run on machines that
+    don't support that extension.  */
+ 
+-#if (GCC_VERSION >= 4005) && (defined(__i386__) || defined(__x86_64__)) && !(defined(__sun__) && defined(__svr4__))
++#if (!defined(__i386__)) || defined(__x86_64__) && !(defined(__sun__) && defined(__svr4__))
+ 
+ /* Replicated character data to be shared between implementations.
+    Recall that outside of a context with vector support we can't
