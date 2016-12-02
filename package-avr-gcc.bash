@@ -15,7 +15,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-OUTPUT_VERSION=4.9.2-atmel3.5.3-arduino2
+source build.conf
+
+OUTPUT_VERSION=${GCC_VERSION}-atmel${AVR_VERSION}-${BUILD_NUMBER}
 
 export OS=`uname -o || uname`
 export TARGET_OS=$OS
@@ -67,8 +69,8 @@ else
 
 fi
 
-rm -rf autoconf-2.64 automake-1.11.1
-rm -rf gcc gmp-5.0.2 mpc-0.9 mpfr-3.0.0 binutils avr-libc libc avr8-headers gdb
+rm -rf autoconf-${AUTOCONF_VERSION} automake-${AUTOMAKE_VERSION}
+rm -rf gcc gmp-${GMP_VERSION} mpc-${MPC_VERSION} mpfr-${MPFR_VERSION} binutils avr-libc libc avr8-headers gdb
 rm -rf toolsdir objdir *-build
 
 ./tools.bash

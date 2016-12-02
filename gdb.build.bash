@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+source build.conf
+
 if [[ ! -d toolsdir  ]] ;
 then
 	echo "You must first build the tools: run build_tools.bash"
@@ -29,7 +31,7 @@ export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f avr-gdb.tar.bz2  ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.3/avr-gdb.tar.bz2
+	wget $AVR_SOURCES/avr-gdb.tar.bz2
 fi
 
 tar xfv avr-gdb.tar.bz2
@@ -65,5 +67,7 @@ fi
 
 nice -n 10 make -j $MAKE_JOBS
 
-make install
+# New versions of gdb share the same configure/make scripts with binutils. Running make install-gdb to
+# install just the gdb binaries.
+make install-gdb
 

@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+source build.conf
+
 if [[ ! -d toolsdir  ]] ;
 then
 	echo "You must first build the tools: run build_tools.bash"
@@ -27,30 +29,30 @@ cd -
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
-if [[ ! -f gmp-5.0.2.tar.bz2  ]] ;
+if [[ ! -f gmp-${GMP_VERSION}.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/gmp/gmp-5.0.2.tar.bz2
+	wget ${GMP_SOURCE}
 fi
 
-tar xfv gmp-5.0.2.tar.bz2
+tar xfv gmp-${GMP_VERSION}.tar.bz2
 
-if [[ ! -f mpfr-3.0.0.tar.bz2  ]] ;
+if [[ ! -f mpfr-${GMPFR_VERSION}.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/mpfr/mpfr-3.0.0.tar.bz2
+	wget ${MPFR_SOURCE}
 fi
 
-tar xfv mpfr-3.0.0.tar.bz2
+tar xfv mpfr-${MPFR_VERSION}.tar.bz2
 
-if [[ ! -f mpc-0.9.tar.gz  ]] ;
+if [[ ! -f mpc-${MPC_VERSION}.tar.gz  ]] ;
 then
-	wget http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
+	wget ${MPC_SOURCE}
 fi
 
-tar xfv mpc-0.9.tar.gz
+tar xfv mpc-${MPC_VERSION}.tar.gz
 
 if [[ ! -f avr-gcc.tar.bz2 ]] ;
 then
-	wget http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/3.5.3/avr-gcc.tar.bz2
+	wget $AVR_SOURCES/avr-gcc.tar.bz2
 fi
 
 tar xfv avr-gcc.tar.bz2

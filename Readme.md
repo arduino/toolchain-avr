@@ -5,15 +5,34 @@ This is the AVR Toolchain used in the [Arduino IDE](http://arduino.cc/).
 As soon as Atmel [ships a newer toolchain](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/), we pull the source code, **patch it** with some user contributed patches and deliver it with the [Arduino IDE](http://arduino.cc/).
 Therefore, the resulting binaries may differ significantly from Atmel's. And you should start blaming us if things are not working as expected :)
 
-Latest toolchain available is based on Atmel 3.5.2 version. It contains:
+### Configuring
+
+Edit the `build.conf` file, currently the only thing worth changing is `AVR_VERSION` on the first line to match whatever the [latest version is](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/).
+
+At time of writing, the latest toolchain available is based on Atmel 3.5.4 version. It contains:
  - binutils-2.26
  - gcc-4.9.2
  - avr-libc-2.0.0
  - gdb-7.8
-
+ 
 ### Building
 
 Setup has been done on partially set up development machines. If, trying to compile on your machine, you find any package missing from the following list, please open an issue at once! We all can't afford wasting time on setup :)
+
+To just build, after getting the requirements...
+```bash
+./tools.bash
+./binutils.build.bash
+./gcc.build.bash
+./libc.build.bash
+./gdb.build.bash
+```
+after a successful compile the binaries etc will be found in `objdir`
+
+To package, after getting the requirements...
+```bash
+./package-avr-gcc.bash
+```
 
 #### Debian requirements
 
