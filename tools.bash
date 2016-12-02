@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+source build.conf
+
 mkdir -p toolsdir/bin
 cd toolsdir
 TOOLS_PATH=`pwd`
@@ -28,14 +30,14 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-if [[ ! -f autoconf-2.64.tar.bz2  ]] ;
+if [[ ! -f autoconf-${AUTOCONF_VERSION}.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/autoconf/autoconf-2.64.tar.bz2
+	wget $AUTOCONF_SOURCE
 fi
 
-tar xfjv autoconf-2.64.tar.bz2
+tar xfjv autoconf-${AUTOCONF_VERSION}.tar.bz2
 
-cd autoconf-2.64
+cd autoconf-${AUTOCONF_VERSION}
 
 CONFARGS="--prefix=$TOOLS_PATH"
 
@@ -47,20 +49,25 @@ make install
 
 cd -
 
-if [[ ! -f automake-1.11.1.tar.bz2  ]] ;
+if [[ ! -f automake-${AUTOMAKE_VERSION}.tar.bz2  ]] ;
 then
-	wget http://mirror.switch.ch/ftp/mirror/gnu/automake/automake-1.11.1.tar.bz2
+	wget $AUTOMAKE_SOURCE
 fi
 
-tar xfjv automake-1.11.1.tar.bz2
+tar xfjv automake-${AUTOMAKE_VERSION}.tar.bz2
 
-cd automake-1.11.1
+cd automake-${AUTOMAKE_VERSION}
 
 ./bootstrap
 
 CONFARGS="--prefix=$TOOLS_PATH"
 
 ./configure $CONFARGS
+
+# Prevent compilation problem with docs complaining about @itemx not following @item
+cp doc/automake.texi doc/automake.texi2
+cat doc/automake.texi2 | sed -r 's/@itemx/@c @itemx/' >doc/automake.texi
+rm doc/automake.texi2
 
 nice -n 10 make -j $MAKE_JOBS
 
