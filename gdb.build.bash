@@ -67,5 +67,7 @@ fi
 
 nice -n 10 make -j $MAKE_JOBS
 
-make install
+# New versions of gdb share the same configure/make scripts with binutils. Running make install-gdb to
+# install just the gdb binaries.
+make install-gdb
 
