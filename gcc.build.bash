@@ -36,7 +36,7 @@ fi
 
 tar xfv gmp-${GMP_VERSION}.tar.bz2
 
-if [[ ! -f mpfr-${GMPFR_VERSION}.tar.bz2  ]] ;
+if [[ ! -f mpfr-${MPFR_VERSION}.tar.bz2  ]] ;
 then
 	wget ${MPFR_SOURCE}
 fi
