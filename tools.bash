@@ -66,7 +66,7 @@ CONFARGS="--prefix=$TOOLS_PATH"
 
 # Prevent compilation problem with docs complaining about @itemx not following @item
 cp doc/automake.texi doc/automake.texi2
-cat doc/automake.texi2 | sed -r 's/@itemx/@c @itemx/' >doc/automake.texi
+cat doc/automake.texi2 | $SED -r 's/@itemx/@c @itemx/' >doc/automake.texi
 rm doc/automake.texi2
 
 nice -n 10 make -j $MAKE_JOBS
