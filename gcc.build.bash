@@ -72,9 +72,9 @@ autoconf
 popd
 popd
 
-mv gmp-5.0.2 gcc/gmp
-mv mpfr-3.0.0 gcc/mpfr
-mv mpc-0.9 gcc/mpc
+mv gmp-${GMP_VERSION} gcc/gmp
+mv mpfr-${MPFR_VERSION} gcc/mpfr
+mv mpc-${MPC_VERSION} gcc/mpc
 
 mkdir -p objdir
 cd objdir
