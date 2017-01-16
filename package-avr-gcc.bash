@@ -49,7 +49,7 @@ elif [[ $OS == "Msys" || $OS == "Cygwin" ]] ; then
   export PATH=$PATH:/c/MinGW/bin/:/c/cygwin/bin/
   export CC="mingw32-gcc -m32"
   export CXX="mingw32-g++ -m32"
-  export CFLAGS="-DWIN32"
+  export CFLAGS="-DWIN32 -D__USE_MINGW_ACCESS"
   export CXXFLAGS="-DWIN32"
   export LDFLAGS="-DWIN32"
   export MAKE_JOBS=1
