@@ -51,6 +51,7 @@ sudo port install wget +universal
 sudo port install automake +universal
 sudo port install autoconf +universal
 sudo port install gpatch +universal
+sudo port install gsed +universal
 ```
 
 #### Windows requirements
