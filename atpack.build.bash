@@ -79,10 +79,10 @@ for x in $ALL_DEVICE_SPECS; do
   fi
 done
 
-NEW_ALL_FILES=`find ../objdir`
+#NEW_ALL_FILES=`find ../objdir`
 
-echo "NEW FILES ADDED: "
-diff  <(echo "$ALL_FILES" ) <(echo "$NEW_ALL_FILES")
+#echo "NEW FILES ADDED: "
+#diff  <(echo "$ALL_FILES" ) <(echo "$NEW_ALL_FILES")
 
 cd ..
 
