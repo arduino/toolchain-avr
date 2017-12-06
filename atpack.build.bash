@@ -53,7 +53,7 @@ rm -rf temp/device-specs
 
 EXTRA_LIBS=`diff -r -q ../objdir/avr/lib temp/ | grep "Only in" | grep temp | cut -f4 -d" "`
 for x in $EXTRA_LIBS; do
-  if [ ! -d ${x} ]; then
+  if [ ! -d temp/${x} ]; then
   cd temp
   LOCATION=`find . | grep ${x}`
   cd ..
