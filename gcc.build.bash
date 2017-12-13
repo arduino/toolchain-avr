@@ -81,6 +81,10 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
+if [[ $CROSS_COMPILE == "mingw" ]] ; then
+	EXTRA_CONFARGS="--host=i686-w64-mingw32"
+fi
+
 mkdir -p gcc-build
 cd gcc-build
 
@@ -92,12 +96,12 @@ CONFARGS=" \
 	--disable-nls \
 	--disable-checking \
 	--disable-libssp \
-        --disable-libada \
+    --disable-libada \
 	--disable-shared \
 	--enable-lto \
-        --with-avrlibc=yes \
+    --with-avrlibc=yes \
 	--with-dwarf2 \
-        --disable-doc \
+    --disable-doc \
 	--target=avr"
 
 if [ `uname -s` == "Darwin" ]
@@ -106,7 +110,7 @@ then
 	LDFLAGS="$LDFLAGS -L/usr/lib"
 fi
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
