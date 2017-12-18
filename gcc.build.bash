@@ -57,20 +57,20 @@ fi
 
 tar xfv avr-gcc.tar.bz2
 
-pushd gcc
+#pushd gcc
 #pushd gcc/config/avr/
 #sh genopt.sh avr-mcus.def > avr-tables.opt
 #cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
 #popd
-pushd gcc
-for p in ../../avr-gcc-patches/*.patch
-do
-	echo Applying $p
-	patch -p1 < $p
-done
-autoconf
-popd
-popd
+#pushd gcc
+#for p in ../../avr-gcc-patches/*.patch
+#do
+#	echo Applying $p
+#	patch -p1 < $p
+#done
+#autoconf
+#popd
+#popd
 
 mv gmp-${GMP_VERSION} gcc/gmp
 mv mpfr-${MPFR_VERSION} gcc/mpfr
