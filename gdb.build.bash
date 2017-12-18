@@ -27,6 +27,10 @@ cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
 
+if [[ $CROSS_COMPILE == "mingw" ]] ; then
+	EXTRA_CONFARGS="--host=i686-w64-mingw32"
+fi
+
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f avr-gdb.tar.bz2  ]] ;
@@ -59,7 +63,7 @@ CONFARGS=" \
 	--disable-binutils \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
