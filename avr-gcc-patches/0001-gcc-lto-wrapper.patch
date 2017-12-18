@@ -1,0 +1,11 @@
+--- gcc/lto-wrapper.c.orig	2016-06-14 21:13:06.985134945 +0200
++++ gcc/lto-wrapper.c	2016-06-14 21:15:37.825167119 +0200
+@@ -594,7 +594,7 @@
+ 	  filename[p - argv[i]] = '\0';
+ 	  file_offset = (off_t) loffset;
+ 	}
+-      fd = open (argv[i], O_RDONLY);
++      fd = open (argv[i], O_RDONLY|O_BINARY);
+       if (fd == -1)
+ 	continue;
+       sobj = simple_object_start_read (fd, file_offset, "__GNU_LTO", 
