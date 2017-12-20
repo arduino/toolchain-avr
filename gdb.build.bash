@@ -40,13 +40,13 @@ fi
 
 tar xfv avr-gdb.tar.bz2
 
-cd gdb
-for p in ../avr-gdb-patches/*.patch
-do
-	echo Applying $p
-	patch -p1 < $p
-done
-cd -
+#cd gdb
+#for p in ../avr-gdb-patches/*.patch
+#do
+#	echo Applying $p
+#	patch -p1 < $p
+#done
+#cd -
 
 mkdir -p objdir
 cd objdir
