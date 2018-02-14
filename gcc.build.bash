@@ -104,12 +104,6 @@ CONFARGS=" \
     --disable-doc \
 	--target=avr"
 
-if [ `uname -s` == "Darwin" ]
-then
-	# Use default system libraries (no other Macports libraries)
-	LDFLAGS="$LDFLAGS -L/usr/lib"
-fi
-
 CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
