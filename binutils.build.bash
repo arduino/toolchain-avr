@@ -23,8 +23,8 @@ then
 	exit 1
 fi
 
-if [[ $CROSS_COMPILE == "mingw" ]] ; then
-	EXTRA_CONFARGS="--host=i686-w64-mingw32"
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
 fi
 
 cd toolsdir/bin

@@ -81,8 +81,8 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
-if [[ $CROSS_COMPILE == "mingw" ]] ; then
-	EXTRA_CONFARGS="--host=i686-w64-mingw32"
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
 fi
 
 mkdir -p gcc-build

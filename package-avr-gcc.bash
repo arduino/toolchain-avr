@@ -28,7 +28,23 @@ if [[ $CROSS_COMPILE == "mingw" ]] ; then
   export CXX="i686-w64-mingw32-g++"
   export CROSS_COMPILE_HOST="i686-w64-mingw32"
   export TARGET_OS="Windows"
-  OUTPUT_TAG=i686-w64-mingw32
+  export OUTPUT_TAG=i686-w64-mingw32
+
+elif [[ $CROSS_COMPILE == "osxcross" ]] ; then
+
+  export CC="o32-clang"
+  export CXX="o32-clang++"
+  export CROSS_COMPILE_HOST="i386-apple-darwin13"
+  export TARGET_OS="OSX"
+  export OUTPUT_TAG=i386-apple-darwin13
+
+elif [[ $CROSS_COMPILE == "armcross" ]] ; then
+
+  export CC="arm-linux-gnueabihf-gcc"
+  export CXX="arm-linux-gnueabihf-g++"
+  export CROSS_COMPILE_HOST="arm-linux-gnueabihf"
+  export TARGET_OS="LinuxARM"
+  export OUTPUT_TAG=arm-linux-gnueabihf
 
 elif [[ $OS == "GNU/Linux" ]] ; then
 

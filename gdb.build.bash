@@ -27,8 +27,8 @@ cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
 
-if [[ $CROSS_COMPILE == "mingw" ]] ; then
-	EXTRA_CONFARGS="--host=i686-w64-mingw32"
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
 fi
 
 export PATH="$TOOLS_BIN_PATH:$PATH"
