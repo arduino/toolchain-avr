@@ -77,7 +77,7 @@ rm -rf toolsdir objdir *-build
 ./binutils.build.bash
 ./gcc.build.bash
 ./avr-libc.build.bash
-./gdb.build.bash
+#./gdb.build.bash
 
 rm -rf objdir/{info,man,share}
 

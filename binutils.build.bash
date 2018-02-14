@@ -62,9 +62,10 @@ CONFARGS=" \
 	--disable-werror \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
-	--enable-lto \
-	--enable-plugins\
-	--with-pic \
+	--disable-libdecnumber \
+	--disable-gdb \
+	--disable-readline \
+	--disable-sim \
 	--target=avr"
 
 CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils/configure $CONFARGS $EXTRA_CONFARGS
