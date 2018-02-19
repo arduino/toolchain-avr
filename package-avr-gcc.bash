@@ -38,7 +38,7 @@ elif [[ $CROSS_COMPILE == "osxcross" ]] ; then
   export TARGET_OS="OSX"
   export OUTPUT_TAG=i386-apple-darwin13
 
-elif [[ $CROSS_COMPILE == "armcross" ]] ; then
+elif [[ $CROSS_COMPILE == "arm-cross" ]] ; then
 
   export CC="arm-linux-gnueabihf-gcc"
   export CXX="arm-linux-gnueabihf-g++"
