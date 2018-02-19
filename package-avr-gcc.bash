@@ -99,7 +99,7 @@ rm -rf objdir/{info,man,share}
 
 if [[ -f ${ATMEL_ATMEGA_PACK_FILENAME}.atpack ]] ; then
 #add extra files from atpack (only if the package is altrady there)
-./atpack.build.bash
+${BASH} ./atpack.build.bash
 fi
 
 # if producing a windows build, compress as zip and
