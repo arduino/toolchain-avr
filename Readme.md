@@ -37,7 +37,7 @@ To package, after getting the requirements...
 #### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config wget
 ```
 
 #### Mac OSX requirements
