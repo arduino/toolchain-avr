@@ -24,7 +24,7 @@ To just build, after getting the requirements...
 ./tools.bash
 ./binutils.build.bash
 ./gcc.build.bash
-./libc.build.bash
+./avr-libc.build.bash
 ./gdb.build.bash
 ```
 after a successful compile the binaries etc will be found in `objdir`
@@ -37,7 +37,7 @@ To package, after getting the requirements...
 #### Debian requirements
 
 ```bash
-sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config
+sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config wget
 ```
 
 #### Mac OSX requirements
