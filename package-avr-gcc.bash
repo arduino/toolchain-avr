@@ -39,6 +39,8 @@ elif [[ $OS == "GNU/Linux" ]] ; then
     OUTPUT_TAG=i686-pc-linux-gnu
   elif [[ $MACHINE == "armv7l" ]] ; then
     OUTPUT_TAG=armhf-pc-linux-gnu
+  elif [[ $MACHINE == "aarch64" ]] ; then
+    OUTPUT_TAG=aarch64-pc-linux-gnu
   else
     echo Linux Machine not supported: $MACHINE
     exit 1

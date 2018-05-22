@@ -58,6 +58,7 @@ tar xfjv automake-${AUTOMAKE_VERSION}.tar.bz2
 
 cd automake-${AUTOMAKE_VERSION}
 
+cp ../config.guess-am-1.11.4 lib/config.guess
 ./bootstrap
 
 CONFARGS="--prefix=$TOOLS_PATH"
