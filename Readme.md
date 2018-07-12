@@ -9,9 +9,9 @@ Therefore, the resulting binaries may differ significantly from Atmel's. And you
 
 Edit the `build.conf` file, currently the only thing worth changing is `AVR_VERSION` on the first line to match whatever the [latest version is](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/).
 
-At time of writing, the latest toolchain available is based on Atmel 3.5.4 version. It contains:
+At time of writing, the latest toolchain available is based on Atmel 3.6.1 version. It contains:
  - binutils-2.26
- - gcc-4.9.2
+ - gcc-5.4.0
  - avr-libc-2.0.0
  - gdb-7.8
  
