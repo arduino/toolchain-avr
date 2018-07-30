@@ -24,7 +24,7 @@ To just build, after getting the requirements...
 ./tools.bash
 ./binutils.build.bash
 ./gcc.build.bash
-./libc.build.bash
+./avr-libc.build.bash
 ./gdb.build.bash
 ```
 after a successful compile the binaries etc will be found in `objdir`
