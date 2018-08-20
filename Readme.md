@@ -41,7 +41,7 @@ sudo apt-get install build-essential gperf bison subversion texinfo zip automake
 ```
 
 #### Mac OSX requirements
-
+1.
 You need to install MacPorts: https://www.macports.org/install.php. Once done, open a terminal and type:
 
 ```bash
@@ -53,6 +53,16 @@ sudo port install autoconf +universal
 sudo port install gpatch +universal
 sudo port install gsed +universal
 ```
+
+2.
+You need to install `brew`: https://www.brew.sh. Once done, open a terminal and type:
+
+```bash
+brew update
+brew upgrade
+brew install wget automake autoconf gpatch gnu-sed
+```
+
 
 #### Windows requirements
 
