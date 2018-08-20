@@ -41,7 +41,7 @@ sudo apt-get install build-essential gperf bison subversion texinfo zip automake
 ```
 
 #### Mac OSX requirements.
-Either use `brew` or `MacPorts` to install dependencies
+Either use Homebrew or MacPorts to install dependencies.
 ##### MacPorts
 You need to install MacPorts: https://www.macports.org/install.php. Once done, open a terminal and type:
 
@@ -55,8 +55,8 @@ sudo port install gpatch +universal
 sudo port install gsed +universal
 ```
 
-##### Brew
-You need to install `brew`: https://www.brew.sh. Once done, open a terminal and type:
+##### Homebrew
+You need to install Homebrew: https://www.brew.sh. Once done, open a terminal and type:
 
 ```bash
 brew update
