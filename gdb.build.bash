@@ -27,6 +27,10 @@ cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
 
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
+fi
+
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f avr-gdb.tar.bz2  ]] ;
@@ -36,13 +40,13 @@ fi
 
 tar xfv avr-gdb.tar.bz2
 
-cd gdb
-for p in ../avr-gdb-patches/*.patch
-do
-	echo Applying $p
-	patch -p1 < $p
-done
-cd -
+#cd gdb
+#for p in ../avr-gdb-patches/*.patch
+#do
+#	echo Applying $p
+#	patch -p1 < $p
+#done
+#cd -
 
 mkdir -p objdir
 cd objdir
@@ -59,7 +63,7 @@ CONFARGS=" \
 	--disable-binutils \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

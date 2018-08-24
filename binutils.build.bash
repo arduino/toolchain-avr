@@ -23,6 +23,10 @@ then
 	exit 1
 fi
 
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
+fi
+
 cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
@@ -58,12 +62,13 @@ CONFARGS=" \
 	--disable-werror \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
-	--enable-lto \
-	--enable-plugins\
-	--with-pic \
+	--disable-libdecnumber \
+	--disable-gdb \
+	--disable-readline \
+	--disable-sim \
 	--target=avr"
 
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../binutils/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

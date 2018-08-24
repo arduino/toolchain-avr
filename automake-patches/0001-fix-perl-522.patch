@@ -1,0 +1,11 @@
+--- /automake.in	2017-12-18 12:26:59.455263520 +0100
++++ /automake.in	2017-12-18 12:27:21.228596603 +0100
+@@ -4110,7 +4110,7 @@
+ sub substitute_ac_subst_variables ($)
+ {
+   my ($text) = @_;
+-  $text =~ s/\${([^ \t=:+{}]+)}/&substitute_ac_subst_variables_worker ($1)/ge;
++  $text =~ s/\$[{]([^ \t=:+{}]+)}/substitute_ac_subst_variables_worker ($1)/ge;
+   return $text;
+ }
+ 

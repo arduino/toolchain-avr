@@ -57,20 +57,20 @@ fi
 
 tar xfv avr-gcc.tar.bz2
 
-pushd gcc
+#pushd gcc
 #pushd gcc/config/avr/
 #sh genopt.sh avr-mcus.def > avr-tables.opt
 #cat avr-mcus.def | awk -f genmultilib.awk FORMAT="Makefile" > t-multilib 
 #popd
-pushd gcc
-for p in ../../avr-gcc-patches/*.patch
-do
-	echo Applying $p
-	patch -p1 < $p
-done
-autoconf
-popd
-popd
+#pushd gcc
+#for p in ../../avr-gcc-patches/*.patch
+#do
+#	echo Applying $p
+#	patch -p1 < $p
+#done
+#autoconf
+#popd
+#popd
 
 mv gmp-${GMP_VERSION} gcc/gmp
 mv mpfr-${MPFR_VERSION} gcc/mpfr
@@ -81,6 +81,10 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
+if [[ x$CROSS_COMPILE != x ]] ; then
+	EXTRA_CONFARGS="--host=$OUTPUT_TAG"
+fi
+
 mkdir -p gcc-build
 cd gcc-build
 
@@ -88,25 +92,16 @@ CONFARGS=" \
 	--enable-fixed-point \
 	--enable-languages=c,c++ \
 	--prefix=$PREFIX \
-	--enable-long-long \
 	--disable-nls \
-	--disable-checking \
 	--disable-libssp \
-        --disable-libada \
+    --disable-libada \
 	--disable-shared \
-	--enable-lto \
-        --with-avrlibc=yes \
+    --with-avrlibc=yes \
 	--with-dwarf2 \
-        --disable-doc \
+    --disable-doc \
 	--target=avr"
 
-if [ `uname -s` == "Darwin" ]
-then
-	# Use default system libraries (no other Macports libraries)
-	LDFLAGS="$LDFLAGS -L/usr/lib"
-fi
-
-CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS
+CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gcc/configure $CONFARGS $EXTRA_CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"

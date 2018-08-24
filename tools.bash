@@ -58,6 +58,8 @@ tar xfjv automake-${AUTOMAKE_VERSION}.tar.bz2
 
 cd automake-${AUTOMAKE_VERSION}
 
+patch -p1 < ../automake-patches/0001-fix-perl-522.patch
+
 cp ../config.guess-am-1.11.4 lib/config.guess
 ./bootstrap
 
