@@ -40,8 +40,9 @@ To package, after getting the requirements...
 sudo apt-get install build-essential gperf bison subversion texinfo zip automake flex libtinfo-dev pkg-config
 ```
 
-#### Mac OSX requirements
-
+#### Mac OSX requirements.
+Either use Homebrew or MacPorts to install dependencies.
+##### MacPorts
 You need to install MacPorts: https://www.macports.org/install.php. Once done, open a terminal and type:
 
 ```bash
@@ -53,6 +54,16 @@ sudo port install autoconf +universal
 sudo port install gpatch +universal
 sudo port install gsed +universal
 ```
+
+##### Homebrew
+You need to install Homebrew: https://www.brew.sh. Once done, open a terminal and type:
+
+```bash
+brew update
+brew upgrade
+brew install wget automake autoconf gpatch gnu-sed
+```
+
 
 #### Windows requirements
 
