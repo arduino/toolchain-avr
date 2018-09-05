@@ -19,7 +19,7 @@ source build.conf
 
 if [[ ! -d toolsdir  ]] ;
 then
-	echo "You must first build the tools: run build_tools.bash"
+	echo "You must first build the tools: run ./tools.bash"
 	exit 1
 fi
 
