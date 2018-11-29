@@ -27,9 +27,6 @@ cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
 
-MPFR_VERSION=3.1.0
-MPFR_SOURCE=http://ftp.gnu.org/gnu//mpfr/mpfr-3.1.0.tar.bz2
-
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f gmp-${GMP_VERSION}.tar.bz2  ]] ;
