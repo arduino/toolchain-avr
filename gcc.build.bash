@@ -27,6 +27,9 @@ cd toolsdir/bin
 TOOLS_BIN_PATH=`pwd`
 cd -
 
+MPFR_VERSION=3.1.0
+MPFR_SOURCE=http://ftp.gnu.org/gnu//mpfr/mpfr-3.1.0.tar.bz2
+
 export PATH="$TOOLS_BIN_PATH:$PATH"
 
 if [[ ! -f gmp-${GMP_VERSION}.tar.bz2  ]] ;
@@ -50,12 +53,13 @@ fi
 
 tar xfv mpc-${MPC_VERSION}.tar.gz
 
-if [[ ! -f avr-gcc.tar.bz2 ]] ;
+if [[ ! -f gcc-7.3.0.tar.xz ]] ;
 then
-	wget $AVR_SOURCES/avr-gcc.tar.bz2
+	wget https://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
 fi
 
-tar xfv avr-gcc.tar.bz2
+tar xfv gcc-7.3.0.tar.xz
+mv gcc-7.3.0 gcc
 
 #pushd gcc
 #pushd gcc/config/avr/
