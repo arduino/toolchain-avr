@@ -1,0 +1,1827 @@
+diff -ur gcc/gcc/config/avr/avr-arch.h gcc-7.3.0-patched/gcc/config/avr/avr-arch.h
+--- gcc/gcc/config/avr/avr-arch.h	2017-04-04 00:30:56.274463000 +0200
++++ gcc-7.3.0-patched/gcc/config/avr/avr-arch.h	2018-11-29 16:17:03.362317759 +0100
+@@ -41,6 +41,7 @@
+   ARCH_AVR6,
+   ARCH_AVRTINY,
+   ARCH_AVRXMEGA2,
++  ARCH_AVRXMEGA3,
+   ARCH_AVRXMEGA4,
+   ARCH_AVRXMEGA5,
+   ARCH_AVRXMEGA6,
+@@ -86,6 +87,9 @@
+   /* Default start of data section address for architecture.  */
+   int default_data_section_start;
+ 
++  /* Offset where flash memory is seen in RAM address range or 0.  */
++  int flash_pm_offset;
++
+   /* Offset between SFR address and RAM address:
+      SFR-address = RAM-address - sfr_offset  */
+   int sfr_offset;
+@@ -120,6 +124,9 @@
+   /* Start of text section. */
+   int text_section_start;
+ 
++  /* Non bit addressable registers mask.  */
++  unsigned int non_bit_addressable_registers_mask;
++
+   /* Flash size in bytes.  */
+   int flash_size;
+ } avr_mcu_t;
+@@ -150,7 +157,16 @@
+ 
+      For information please refer the following respective errata links
+        http://www.atmel.com/dyn/resources/prod_documents/doc2494.pdf
+-       http://www.atmel.com/dyn/resources/prod_documents/doc1436.pdf  */
++       http://www.atmel.com/dyn/resources/prod_documents/doc1436.pdf
++
++AVR_ISA_RCALL
++  Always use RJMP / RCALL and assume JMP / CALL are not available.
++  This affects multilib selection via specs generation and -mshort-calls.
++  Even if a device like ATtiny417 from avrxmega3 supports JMP / CALL, we
++  assume these instructions are not available and we set the built-in
++  macro __AVR_HAVE_JMP_CALL__ accordingly.  This macro is used to
++  determine a rough estimate of flash size in libgcc, and AVR-LibC uses
++  this macro to determine vector sizes.  */
+ 
+ enum avr_device_specific_features
+ {
+@@ -158,8 +174,10 @@
+   AVR_ISA_RMW     = 0x1, /* device has RMW instructions. */
+   AVR_SHORT_SP    = 0x2, /* Stack Pointer has 8 bits width. */
+   AVR_ERRATA_SKIP = 0x4, /* device has a core erratum. */
+-  AVR_ISA_LDS     = 0x8  /* whether LDS / STS is valid for all data in static
++  AVR_ISA_LDS     = 0x8, /* whether LDS / STS is valid for all data in static
+                             storage.  Only useful for reduced Tiny.  */
++  AVR_ISA_RCALL   = 0x10 /* Use RJMP / RCALL even though JMP / CALL
++                            are available (-mshort-calls).  */
+ };
+ 
+ /* Map architecture to its texinfo string.  */
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-arch.h.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-arch.h.rej
+diff -ur gcc/gcc/config/avr/avr.c gcc-7.3.0-patched/gcc/config/avr/avr.c
+--- gcc/gcc/config/avr/avr.c	2017-08-22 09:55:34.767308000 +0200
++++ gcc-7.3.0-patched/gcc/config/avr/avr.c	2018-12-03 11:05:34.994764831 +0100
+@@ -51,6 +51,8 @@
+ #include "builtins.h"
+ #include "context.h"
+ #include "tree-pass.h"
++#include "vec.h"
++#include "opts.h"
+ #include "print-rtl.h"
+ #include "rtl-iter.h"
+ 
+@@ -94,6 +96,14 @@
+ #define AVR_SYMBOL_FLAG_TINY_ABSDATA \
+   (SYMBOL_FLAG_MACH_DEP << 8)
+ 
++/* (AVR_TINY only): Symbol has attribute progmem */
++#define AVR_SYMBOL_FLAG_TINY_PM \
++  (SYMBOL_FLAG_MACH_DEP << 7)
++
++/* (AVR_TINY only): Symbol has attribute absdata */
++#define AVR_SYMBOL_FLAG_TINY_ABSDATA \
++  (SYMBOL_FLAG_MACH_DEP << 8)
++
+ #define TINY_ADIW(REG1, REG2, I)                                \
+     "subi " #REG1 ",lo8(-(" #I "))" CR_TAB                      \
+     "sbci " #REG2 ",hi8(-(" #I "))"
+@@ -119,6 +129,8 @@
+   { ADDR_SPACE_MEMX, 1, 3, "__memx",  0, ".progmemx.data" },
+ };
+ 
++unsigned long avr_non_bit_addressable_registers_mask;
++
+ 
+ /* Holding RAM addresses of some SFRs used by the compiler and that
+    are unique over all devices in an architecture like 'avr4'.  */
+@@ -720,6 +732,58 @@
+   return false;
+ }
+ 
++/* Same as opts-common.c:integral_argument, but uses strtoul instead
++	 of atoi/strtol. */
++
++static unsigned long
++parse_unsigned_long (const char *arg)
++{
++  const char *p = arg;
++
++  while (*p && ISDIGIT (*p))
++    p++;
++
++  if (*p == '\0')
++    return strtoul(arg, NULL, 10);
++
++  /* It wasn't a decimal number - try hexadecimal.  */
++  if (arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X'))
++    {
++      p = arg + 2;
++      while (*p && ISXDIGIT (*p))
++				p++;
++
++      if (p != arg + 2 && *p == '\0')
++				return strtoul(arg, NULL, 16);
++    }
++
++	warning (OPT_mnon_bit_addressable_registers_mask_,
++					 "argument is not a number, ignored");
++  return 0;
++}
++
++static void
++avr_handle_deferred_options(void) {
++
++  unsigned int i;
++  cl_deferred_option *opt;
++  vec<cl_deferred_option> *v
++    = (vec<cl_deferred_option> *) avr_deferred_options;
++
++  if (v)
++    FOR_EACH_VEC_ELT (*v, i, opt)
++      {
++				switch (opt->opt_index)
++					{
++					case OPT_mnon_bit_addressable_registers_mask_:
++						avr_non_bit_addressable_registers_mask = parse_unsigned_long (opt->arg);
++						break;
++
++					default:
++						gcc_unreachable ();
++					}
++			}
++}
+ 
+ /* Implement `TARGET_OPTION_OVERRIDE'.  */
+ 
+@@ -796,7 +860,12 @@
+ 
+   init_machine_status = avr_init_machine_status;
+ 
++  if (!global_options_set.x_dwarf_version)
++    dwarf_version = 2;
++
+   avr_log_set_avr_log();
++
++  avr_handle_deferred_options();
+ }
+ 
+ /* Function to set up the backend function structure.  */
+@@ -981,6 +1050,15 @@
+   return avr_lookup_function_attribute1 (func, "interrupt");
+ }
+ 
++/* Return nonzero if FUNC is an nmi function as specified
++   by the "nmi" attribute.  */
++
++static int
++avr_nmi_function_p (tree func)
++{
++  return avr_lookup_function_attribute1 (func, "nmi");
++}
++
+ /* Return nonzero if FUNC is a signal function as specified
+    by the "signal" attribute.  */
+ 
+@@ -1028,15 +1106,22 @@
+   cfun->machine->is_naked = avr_naked_function_p (decl);
+   cfun->machine->is_signal = avr_signal_function_p (decl);
+   cfun->machine->is_interrupt = avr_interrupt_function_p (decl);
++  cfun->machine->is_nmi = avr_nmi_function_p (decl);
+   cfun->machine->is_OS_task = avr_OS_task_function_p (decl);
+   cfun->machine->is_OS_main = avr_OS_main_function_p (decl);
+ 
+-  isr = cfun->machine->is_interrupt ? "interrupt" : "signal";
++  if (cfun->machine->is_interrupt)
++    isr = "interrupt";
++  else if (cfun->machine->is_nmi)
++    isr = "nmi";
++  else
++    isr = "signal";
+ 
+   /* Too much attributes make no sense as they request conflicting features. */
+ 
+   if (cfun->machine->is_OS_task + cfun->machine->is_OS_main
+-      + (cfun->machine->is_signal || cfun->machine->is_interrupt) > 1)
++      + (cfun->machine->is_signal || cfun->machine->is_interrupt 
++          || cfun->machine->is_nmi) > 1)
+     error_at (loc, "function attributes %qs, %qs and %qs are mutually"
+               " exclusive", "OS_task", "OS_main", isr);
+ 
+@@ -1047,7 +1132,8 @@
+     warning_at (loc, OPT_Wattributes, "function attributes %qs and %qs have"
+                 " no effect on %qs function", "OS_task", "OS_main", "naked");
+ 
+-  if (cfun->machine->is_interrupt || cfun->machine->is_signal)
++  if (cfun->machine->is_interrupt || cfun->machine->is_signal 
++          || cfun->machine->is_nmi)
+     {
+       tree args = TYPE_ARG_TYPES (TREE_TYPE (decl));
+       tree ret = TREE_TYPE (TREE_TYPE (decl));
+@@ -2154,7 +2240,7 @@
+   if (CONST == GET_CODE (x))
+     x = XEXP (XEXP (x, 0), 0);
+ 
+-  if (SYMBOL_REF_P (x))
++  if (SYMBOL_REF == GET_CODE (x))
+     return SYMBOL_REF_FLAGS (x) & AVR_SYMBOL_FLAG_TINY_ABSDATA;
+ 
+   if (CONST_INT_P (x)
+@@ -2518,7 +2604,7 @@
+   if (AVR_TINY
+       && avr_address_tiny_pm_p (addr))
+     {
+-      addr = plus_constant (Pmode, addr, AVR_TINY_PM_OFFSET);
++      addr = plus_constant (Pmode, addr, avr_arch->flash_pm_offset);
+     }
+ 
+   switch (GET_CODE (addr))
+@@ -2660,8 +2746,8 @@
+ 
+       if ('i' != code)
+         fprintf (file, HOST_WIDE_INT_PRINT_DEC, ival + abcd);
+-      else if (low_io_address_operand (x, VOIDmode)
+-               || high_io_address_operand (x, VOIDmode))
++      /* else if Low or High IO address operand */
++      else if (io_address_operand (x, VOIDmode))
+         {
+           if (AVR_HAVE_RAMPZ && ival == avr_addr.rampz)
+             fprintf (file, "__RAMPZ__");
+@@ -3680,6 +3766,48 @@
+   return "";
+ }
+ 
++/*
++The range check is needed only if the device has SRAM greater than
++LDS/STS range. Only attiny40 has that much SRAM and needs special
++consideration. Also include avrtiny, as code compiled for avrtiny is
++supposed to work for all devices in the arch.
++*/
++static bool tiny_device_has_out_of_range_sram ()
++{
++    return AVR_TINY &&
++        (strcmp (avr_mmcu, "attiny40") == 0
++         ||  strcmp (avr_mmcu, "avrtiny") == 0);
++}
++
++/*
++AVRTC-579
++if operand is symbol or constant expression with value > 0xbf
++  return false, otherwise true
++This check is used to avoid lds/sts instruction with invalid memory
++access range (valid range 0x40..0xbf). For io operand range 0x0..0x3f,
++in/out instruction will be generated.
++*/
++bool tiny_valid_direct_memory_access_range(rtx op, enum machine_mode mode)
++{
++  rtx x;
++
++  if (!AVR_TINY)
++    return true;
++
++  x = XEXP(op,0);
++
++  if (MEM_P(op) && x && (GET_CODE(x) == SYMBOL_REF))
++  {
++    return !tiny_device_has_out_of_range_sram ();
++  }
++  if (MEM_P(op) && x && (CONSTANT_ADDRESS_P (x)) &&
++     !(IN_RANGE (INTVAL (x), 0, 0xC0 - GET_MODE_SIZE (mode))))
++  {
++    return false;
++  }
++
++  return true;
++}
+ 
+ const char*
+ output_movqi (rtx_insn *insn, rtx operands[], int *plen)
+@@ -9413,7 +9541,7 @@
+   if (AVR_TINY
+       && avr_address_tiny_pm_p (x))
+     {
+-      x = plus_constant (Pmode, x, AVR_TINY_PM_OFFSET);
++      x = plus_constant (Pmode, x, avr_arch->flash_pm_offset);
+     }
+ 
+   return default_assemble_integer (x, size, aligned_p);
+@@ -9575,7 +9703,7 @@
+ 			 (GEN_INT (TREE_INT_CST_LOW (arg)), QImode)))
+ 	{
+ 	  warning_at (loc, OPT_Wattributes, "%qE attribute address "
+-		      "out of range", name);
++		      "out of range or not bit addressable", name);
+ 	  *no_add = true;
+ 	}
+       else
+@@ -9641,6 +9769,8 @@
+     false },
+   { "interrupt", 0, 0, true,  false, false,  avr_handle_fndecl_attribute,
+     false },
++  { "nmi",       0, 0, true,  false, false,  avr_handle_fndecl_attribute,
++    false },
+   { "naked",     0, 0, false, true,  true,   avr_handle_fntype_attribute,
+     false },
+   { "OS_task",   0, 0, false, true,  true,   avr_handle_fntype_attribute,
+@@ -10017,9 +10147,11 @@
+ avr_asm_init_sections (void)
+ {
+   /* Override section callbacks to keep track of `avr_need_clear_bss_p'
+-     resp. `avr_need_copy_data_p'.  */
++     resp. `avr_need_copy_data_p'.  If flash is not mapped to RAM then
++     we have also to track .rodata because it is located in RAM then.  */
+ 
+-  readonly_data_section->unnamed.callback = avr_output_data_section_asm_op;
++  if (0 == avr_arch->flash_pm_offset)
++    readonly_data_section->unnamed.callback = avr_output_data_section_asm_op;
+   data_section->unnamed.callback = avr_output_data_section_asm_op;
+   bss_section->unnamed.callback = avr_output_bss_section_asm_op;
+ }
+@@ -10051,9 +10183,13 @@
+ 
+   if (!avr_need_copy_data_p)
+     avr_need_copy_data_p = (STR_PREFIX_P (name, ".data")
+-                            || STR_PREFIX_P (name, ".rodata")
+                             || STR_PREFIX_P (name, ".gnu.linkonce.d"));
+ 
++  if (!avr_need_copy_data_p
++      && 0 == avr_arch->flash_pm_offset)
++    avr_need_copy_data_p = (STR_PREFIX_P (name, ".rodata")
++                            || STR_PREFIX_P (name, ".gnu.linkonce.r"));
++
+   if (!avr_need_clear_bss_p)
+     avr_need_clear_bss_p = STR_PREFIX_P (name, ".bss");
+ 
+@@ -10221,14 +10357,14 @@
+       && decl
+       && VAR_DECL == TREE_CODE (decl)
+       && MEM_P (rtl)
+-      && SYMBOL_REF_P (XEXP (rtl, 0)))
++      && SYMBOL_REF == GET_CODE (XEXP (rtl, 0)))
+     {
+       rtx sym = XEXP (rtl, 0);
+       bool progmem_p = -1 == avr_progmem_p (decl, DECL_ATTRIBUTES (decl));
+ 
+       if (progmem_p)
+         {
+-          // Tag symbols for later addition of 0x4000 (AVR_TINY_PM_OFFSET).
++          // Tag symbols for addition of 0x4000 (avr_arch->flash_pm_offset).
+           SYMBOL_REF_FLAGS (sym) |= AVR_SYMBOL_FLAG_TINY_PM;
+         }
+ 
+@@ -10546,7 +10682,11 @@
+       return true;
+ 
+     case MEM:
+-      *total = COSTS_N_INSNS (GET_MODE_SIZE (mode));
++      /* MEM rtx with non-default address space is more
++         expensive. Not expressing that results in reg
++         clobber during expand (PR 65657). */
++      *total = COSTS_N_INSNS (GET_MODE_SIZE (mode)
++                  + (MEM_ADDR_SPACE(x) == ADDR_SPACE_RAM ? 0 : 5));
+       return true;
+ 
+     case NEG:
+@@ -14452,6 +14592,10 @@
+ 
+ #undef TARGET_USE_BY_PIECES_INFRASTRUCTURE_P
+ #define TARGET_USE_BY_PIECES_INFRASTRUCTURE_P \
++  avr_use_by_pieces_infrastructure_p
++
++#undef TARGET_USE_BY_PIECES_INFRASTRUCTURE_P
++#define TARGET_USE_BY_PIECES_INFRASTRUCTURE_P \
+   avr_use_by_pieces_infrastructure_p
+ 
+ #undef  TARGET_LEGITIMATE_COMBINED_INSN
+diff -ur gcc/gcc/config/avr/avr-c.c gcc-7.3.0-patched/gcc/config/avr/avr-c.c
+--- gcc/gcc/config/avr/avr-c.c	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr-c.c	2018-11-29 15:57:13.998975425 +0100
+@@ -313,11 +313,16 @@
+       cpp_define (pfile, "__AVR_ENHANCED__");
+       cpp_define (pfile, "__AVR_HAVE_MUL__");
+     }
++
++  if (AVR_HAVE_JMP_CALL)
++    cpp_define (pfile, "__AVR_HAVE_JMP_CALL__");
++
+   if (avr_arch->have_jmp_call)
+-    {
+-      cpp_define (pfile, "__AVR_MEGA__");
+-      cpp_define (pfile, "__AVR_HAVE_JMP_CALL__");
+-    }
++    cpp_define (pfile, "__AVR_MEGA__");
++
++  if (AVR_SHORT_CALLS)
++    cpp_define (pfile, "__AVR_SHORT_CALLS__");
++
+   if (AVR_XMEGA)
+     cpp_define (pfile, "__AVR_XMEGA__");
+ 
+@@ -335,9 +340,13 @@
+          (ATtiny4/5/9/10/20 and 40) mapped program memory starts at 0x4000. */
+ 
+       cpp_define_formatted (pfile, "__AVR_TINY_PM_BASE_ADDRESS__=0x%x",
+-                            AVR_TINY_PM_OFFSET);
++                            avr_arch->flash_pm_offset);
+     }
+ 
++  if (avr_arch->flash_pm_offset)
++    cpp_define_formatted (pfile, "__AVR_PM_BASE_ADDRESS__=0x%x",
++                          avr_arch->flash_pm_offset);
++
+   if (AVR_HAVE_EIJMP_EICALL)
+     {
+       cpp_define (pfile, "__AVR_HAVE_EIJMP_EICALL__");
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-c.c.rej
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.c.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.c.rej
+diff -ur gcc/gcc/config/avr/avr-devices.c gcc-7.3.0-patched/gcc/config/avr/avr-devices.c
+--- gcc/gcc/config/avr/avr-devices.c	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr-devices.c	2018-11-29 15:59:05.605642936 +0100
+@@ -34,30 +34,31 @@
+ avr_arch_types[] =
+ {
+   /* unknown device specified */
+-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 32, NULL, AVR_MMCU_DEFAULT },
++  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, NULL, AVR_MMCU_DEFAULT },
+   /*
+-    A  M  J  LM E  E  E  X  R  T  d S   S O   A
+-    S  U  M  PO L  L  I  M  A  I  a t   F ff  r
+-    M  L  P  MV P  P  J  E  M  N  t a   R s   c
+-             XW M  M  M  G  P  Y  a r     e   h
+-                   X  P  A  D       t     t   ID   */
+-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 32, "1",   "avr1"  },
+-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 32, "2",   "avr2"  },
+-  { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0x0060, 32, "25",  "avr25" },
+-  { 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0x0060, 32, "3",   "avr3"  },
+-  { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0x0060, 32, "31",  "avr31" },
+-  { 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0x0060, 32, "35",  "avr35" },
+-  { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0x0060, 32, "4",   "avr4"  },
+-  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0x0060, 32, "5",   "avr5"  },
+-  { 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0x0060, 32, "51",  "avr51" },
+-  { 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0x0060, 32, "6",   "avr6"  },
++    A  M  J  LM E  E  E  X  R  T  d S     FPO     S O   A
++    S  U  M  PO L  L  I  M  A  I  a t     lMff    F ff  r
++    M  L  P  MV P  P  J  E  M  N  t a     a s     R s   c
++             XW M  M  M  G  P  Y  a r     s e       e   h
++                   X  P  A  D       t     h t       t   ID   */
++  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "1",   "avr1"  },
++  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "2",   "avr2"  },
++  { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "25",  "avr25" },
++  { 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "3",   "avr3"  },
++  { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0x0060, 0,      32, "31",  "avr31" },
++  { 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "35",  "avr35" },
++  { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "4",   "avr4"  },
++  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0x0060, 0,      32, "5",   "avr5"  },
++  { 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0x0060, 0,      32, "51",  "avr51" },
++  { 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0x0060, 0,      32, "6",   "avr6"  },
+ 
+-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0040,  0, "100", "avrtiny" },
+-  { 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0x2000,  0, "102", "avrxmega2" },
+-  { 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0x2000,  0, "104", "avrxmega4" },
+-  { 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0x2000,  0, "105", "avrxmega5" },
+-  { 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0x2000,  0, "106", "avrxmega6" },
+-  { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0x2000,  0, "107", "avrxmega7" }
++  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x0040, 0x4000, 0, "100", "avrtiny" },
++  { 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0x2000, 0,      0, "102", "avrxmega2" },
++  { 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0x2000, 0x8000, 0, "103", "avrxmega3" },
++  { 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0x2000, 0,      0, "104", "avrxmega4" },
++  { 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0x2000, 0,      0, "105", "avrxmega5" },
++  { 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0x2000, 0,      0, "106", "avrxmega6" },
++  { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0x2000, 0,      0, "107", "avrxmega7" }
+ };
+ 
+ const avr_arch_info_t
+@@ -95,6 +96,9 @@
+   { ARCH_AVRXMEGA2,
+     "``XMEGA'' devices with more than 8@tie{}KiB and up to 64@tie{}KiB "
+     "of program memory." },
++  { ARCH_AVRXMEGA3,
++    "``XMEGA'' devices with up to 64@tie{}KiB of combined program memory "
++    "and RAM, and with program memory visible in the RAM address space." },
+   { ARCH_AVRXMEGA4,
+     "``XMEGA'' devices with more than 64@tie{}KiB and up to 128@tie{}KiB "
+     "of program memory." },
+@@ -111,12 +115,12 @@
+ const avr_mcu_t
+ avr_mcu_types[] =
+ {
+-#define AVR_MCU(NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, FLASH_SIZE)\
+-  { NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, FLASH_SIZE },
++#define AVR_MCU(NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, NON_BIT_ADDRESSABLE_REG_MASK, FLASH_SIZE)\
++  { NAME, ARCH, DEV_ATTRIBUTE, MACRO, DATA_SEC, TEXT_SEC, NON_BIT_ADDRESSABLE_REG_MASK, FLASH_SIZE },
+ #include "avr-mcus.def"
+ #undef AVR_MCU
+     /* End of list.  */
+-  { NULL, ARCH_UNKNOWN, AVR_ISA_NONE, NULL, 0, 0, 0 }
++  { NULL, ARCH_UNKNOWN, AVR_ISA_NONE, NULL, 0, 0, 0, 0 }
+ };
+ 
+ 
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-devices.c.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-devices.c.rej
+diff -ur gcc/gcc/config/avr/avr.h gcc-7.3.0-patched/gcc/config/avr/avr.h
+--- gcc/gcc/config/avr/avr.h	2017-01-16 10:48:45.991005000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr.h	2018-11-29 15:40:15.268967655 +0100
+@@ -60,7 +60,9 @@
+ 
+ #define TARGET_CPU_CPP_BUILTINS()	avr_cpu_cpp_builtins (pfile)
+ 
+-#define AVR_HAVE_JMP_CALL (avr_arch->have_jmp_call)
++#define AVR_SHORT_CALLS (TARGET_SHORT_CALLS                             \
++                         && avr_arch == &avr_arch_types[ARCH_AVRXMEGA3])
++#define AVR_HAVE_JMP_CALL (avr_arch->have_jmp_call && ! AVR_SHORT_CALLS)
+ #define AVR_HAVE_MUL (avr_arch->have_mul)
+ #define AVR_HAVE_MOVW (avr_arch->have_movw_lpmx)
+ #define AVR_HAVE_LPM (!AVR_TINY)
+@@ -149,6 +151,8 @@
+ #define SIZE_TYPE (INT_TYPE_SIZE == 8 ? "long unsigned int" : "unsigned int")
+ #define PTRDIFF_TYPE (INT_TYPE_SIZE == 8 ? "long int" :"int")
+ 
++#define WCHAR_TYPE "int"
++#define WINT_TYPE "int"
+ #define WCHAR_TYPE_SIZE 16
+ 
+ #define FIRST_PSEUDO_REGISTER 36
+@@ -563,6 +567,10 @@
+   /* 'true' - if current function is a signal function 
+      as specified by the "signal" attribute.  */
+   int is_signal;
++
++  /* 'true' - if current function is an nmi function 
++     as specified by the "nmi" attribute.  */
++  int is_nmi;
+   
+   /* 'true' - if current function is a 'task' function 
+      as specified by the "OS_task" attribute.  */
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.h.orig
+diff -ur gcc/gcc/config/avr/avr-mcus.def gcc-7.3.0-patched/gcc/config/avr/avr-mcus.def
+--- gcc/gcc/config/avr/avr-mcus.def	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr-mcus.def	2018-11-29 16:05:04.965645657 +0100
+@@ -59,298 +59,302 @@
+ 
+        TEXT_START    First address of Flash, used in -Ttext=<TEXT_START>.
+ 
++       NON_BIT_ADDRESSABLE_REG_MASK
++                     Specify the mask for lower 32 IO registers that do not
++                     support bit addressable instructions (e.g. sbi, sbic).
++
+        FLASH_SIZE    Flash size in bytes.
+ 
+    "avr2" must be first for the "0" default to work as intended.  */
+ 
+ /* Classic, <= 8K.  */
+-AVR_MCU ("avr2",             ARCH_AVR2, AVR_ERRATA_SKIP, NULL,                     0x0060, 0x0, 0x60000)
++AVR_MCU ("avr2",             ARCH_AVR2, AVR_ERRATA_SKIP, NULL,                     0x0060, 0x0, 0, 0x60000)
+ 
+-AVR_MCU ("at90s2313",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2313__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("at90s2323",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2323__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("at90s2333",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2333__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("at90s2343",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2343__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny22",         ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny22__",          0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny26",         ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny26__",          0x0060, 0x0, 0x800)
+-AVR_MCU ("at90s4414",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4414__",         0x0060, 0x0, 0x1000)
+-AVR_MCU ("at90s4433",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S4433__",         0x0060, 0x0, 0x1000)
+-AVR_MCU ("at90s4434",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4434__",         0x0060, 0x0, 0x1000)
+-AVR_MCU ("at90s8515",        ARCH_AVR2, AVR_ERRATA_SKIP, "__AVR_AT90S8515__",      0x0060, 0x0, 0x2000)
+-AVR_MCU ("at90c8534",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90C8534__",         0x0060, 0x0, 0x2000)
+-AVR_MCU ("at90s8535",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S8535__",         0x0060, 0x0, 0x2000)
++AVR_MCU ("at90s2313",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2313__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("at90s2323",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2323__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("at90s2333",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2333__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("at90s2343",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S2343__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny22",         ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny22__",          0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny26",         ARCH_AVR2, AVR_SHORT_SP, "__AVR_ATtiny26__",          0x0060, 0x0, 0, 0x800)
++AVR_MCU ("at90s4414",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4414__",         0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("at90s4433",        ARCH_AVR2, AVR_SHORT_SP, "__AVR_AT90S4433__",         0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("at90s4434",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S4434__",         0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("at90s8515",        ARCH_AVR2, AVR_ERRATA_SKIP, "__AVR_AT90S8515__",      0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("at90c8534",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90C8534__",         0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("at90s8535",        ARCH_AVR2, AVR_ISA_NONE, "__AVR_AT90S8535__",         0x0060, 0x0, 0, 0x2000)
+ /* Classic + MOVW, <= 8K.  */
+-AVR_MCU ("avr25",            ARCH_AVR25, AVR_ISA_NONE, NULL,                       0x0060, 0x0, 0x2000)
+-AVR_MCU ("ata5272",          ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA5272__",          0x0100, 0x0, 0x2000)
+-AVR_MCU ("ata6616c",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA6616C__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("attiny13",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13__",         0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny13a",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13A__",        0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny2313",       ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313__",       0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny2313a",      ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313A__",      0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny24",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny24a",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24A__",        0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny4313",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny4313__",       0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny44",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44__",         0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny44a",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44A__",        0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny441",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny441__",        0x0100, 0x0, 0x1000)
+-AVR_MCU ("attiny84",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84__",         0x0060, 0x0, 0x2000)
+-AVR_MCU ("attiny84a",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84A__",        0x0060, 0x0, 0x2000)
+-AVR_MCU ("attiny25",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny25__",         0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny45",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny45__",         0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny85",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny85__",         0x0060, 0x0, 0x2000)
+-AVR_MCU ("attiny261",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261__",        0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny261a",       ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261A__",       0x0060, 0x0, 0x800)
+-AVR_MCU ("attiny461",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461__",        0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny461a",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461A__",       0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny861",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861__",        0x0060, 0x0, 0x2000)
+-AVR_MCU ("attiny861a",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861A__",       0x0060, 0x0, 0x2000)
+-AVR_MCU ("attiny43u",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny43U__",        0x0060, 0x0, 0x1000)
+-AVR_MCU ("attiny87",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny87__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("attiny48",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny48__",         0x0100, 0x0, 0x1000)
+-AVR_MCU ("attiny88",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny88__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("attiny828",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny828__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("attiny841",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny841__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("at86rf401",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_AT86RF401__",        0x0060, 0x0, 0x800)
++AVR_MCU ("avr25",            ARCH_AVR25, AVR_ISA_NONE, NULL,                       0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("ata5272",          ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA5272__",          0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("ata6616c",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATA6616C__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("attiny13",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13__",         0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny13a",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny13A__",        0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny2313",       ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313__",       0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny2313a",      ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny2313A__",      0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny24",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny24a",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny24A__",        0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny4313",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny4313__",       0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny44",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44__",         0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny44a",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny44A__",        0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny441",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny441__",        0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("attiny84",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84__",         0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("attiny84a",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny84A__",        0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("attiny25",         ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny25__",         0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny45",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny45__",         0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny85",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny85__",         0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("attiny261",        ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261__",        0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny261a",       ARCH_AVR25, AVR_SHORT_SP, "__AVR_ATtiny261A__",       0x0060, 0x0, 0, 0x800)
++AVR_MCU ("attiny461",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461__",        0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny461a",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny461A__",       0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny861",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861__",        0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("attiny861a",       ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny861A__",       0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("attiny43u",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny43U__",        0x0060, 0x0, 0, 0x1000)
++AVR_MCU ("attiny87",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny87__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("attiny48",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny48__",         0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("attiny88",         ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny88__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("attiny828",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny828__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("attiny841",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_ATtiny841__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at86rf401",        ARCH_AVR25, AVR_ISA_NONE, "__AVR_AT86RF401__",        0x0060, 0x0, 0, 0x800)
+ /* Classic, > 8K, <= 64K.  */
+-AVR_MCU ("avr3",             ARCH_AVR3, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0x6000)
+-AVR_MCU ("at43usb355",       ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT43USB355__",        0x0060, 0x0, 0x6000)
+-AVR_MCU ("at76c711",         ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT76C711__",          0x0060, 0x0, 0x4000)
++AVR_MCU ("avr3",             ARCH_AVR3, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0, 0x6000)
++AVR_MCU ("at43usb355",       ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT43USB355__",        0x0060, 0x0, 0, 0x6000)
++AVR_MCU ("at76c711",         ARCH_AVR3, AVR_ISA_NONE, "__AVR_AT76C711__",          0x0060, 0x0, 0, 0x4000)
+ /* Classic, == 128K.  */
+-AVR_MCU ("avr31",            ARCH_AVR31, AVR_ERRATA_SKIP, NULL,                    0x0060, 0x0, 0x20000)
+-AVR_MCU ("atmega103",        ARCH_AVR31, AVR_ERRATA_SKIP, "__AVR_ATmega103__",     0x0060, 0x0, 0x20000)
+-AVR_MCU ("at43usb320",       ARCH_AVR31, AVR_ISA_NONE, "__AVR_AT43USB320__",       0x0060, 0x0, 0x10000)
++AVR_MCU ("avr31",            ARCH_AVR31, AVR_ERRATA_SKIP, NULL,                    0x0060, 0x0, 0, 0x20000)
++AVR_MCU ("atmega103",        ARCH_AVR31, AVR_ERRATA_SKIP, "__AVR_ATmega103__",     0x0060, 0x0, 0, 0x20000)
++AVR_MCU ("at43usb320",       ARCH_AVR31, AVR_ISA_NONE, "__AVR_AT43USB320__",       0x0060, 0x0, 0, 0x10000)
+ /* Classic + MOVW + JMP/CALL.  */
+-AVR_MCU ("avr35",            ARCH_AVR35, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata5505",          ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA5505__",          0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata6617c",         ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA6617C__",         0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata664251",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA664251__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("at90usb82",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB82__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90usb162",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB162__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega8u2",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega8U2__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega16u2",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega16U2__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega32u2",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega32U2__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("attiny167",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny167__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("attiny1634",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny1634__",       0x0100, 0x0, 0x4000)
++AVR_MCU ("avr35",            ARCH_AVR35, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata5505",          ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA5505__",          0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata6617c",         ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA6617C__",         0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata664251",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATA664251__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("at90usb82",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB82__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90usb162",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_AT90USB162__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega8u2",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega8U2__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega16u2",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega16U2__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega32u2",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATmega32U2__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("attiny167",        ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny167__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("attiny1634",       ARCH_AVR35, AVR_ISA_NONE, "__AVR_ATtiny1634__",       0x0100, 0x0, 0, 0x4000)
+ /* Enhanced, <= 8K.  */
+-AVR_MCU ("avr4",             ARCH_AVR4, AVR_ISA_NONE,  NULL,                       0x0060, 0x0, 0x2000)
+-AVR_MCU ("ata6285",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6285__",          0x0100, 0x0, 0x2000)
+-AVR_MCU ("ata6286",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6286__",          0x0100, 0x0, 0x2000)
+-AVR_MCU ("ata6289",          ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6289__",           0x0100, 0x0, 0x2000)
+-AVR_MCU ("ata6612c",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6612C__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega8",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8__",          0x0060, 0x0, 0x2000)
+-AVR_MCU ("atmega8a",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8A__",         0x0060, 0x0, 0x2000)
+-AVR_MCU ("atmega48",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48__",         0x0100, 0x0, 0x1000)
+-AVR_MCU ("atmega48a",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48A__",        0x0100, 0x0, 0x1000)
+-AVR_MCU ("atmega48p",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48P__",        0x0100, 0x0, 0x1000)
+-AVR_MCU ("atmega48pa",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48PA__",       0x0100, 0x0, 0x1000)
+-AVR_MCU ("atmega48pb",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48PB__",       0x0100, 0x0, 0x1000)
+-AVR_MCU ("atmega88",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega88a",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88A__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega88p",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88P__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega88pa",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88PA__",       0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega88pb",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88PB__",       0x0100, 0x0, 0x2000)
+-AVR_MCU ("atmega8515",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8515__",       0x0060, 0x0, 0x2000)
+-AVR_MCU ("atmega8535",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8535__",       0x0060, 0x0, 0x2000)
+-AVR_MCU ("atmega8hva",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8HVA__",       0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm1",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM1__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm2",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM2__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm2b",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM2B__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm3",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM3__",         0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm3b",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM3B__",        0x0100, 0x0, 0x2000)
+-AVR_MCU ("at90pwm81",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM81__",        0x0100, 0x0, 0x2000)
++AVR_MCU ("avr4",             ARCH_AVR4, AVR_ISA_NONE,  NULL,                       0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("ata6285",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6285__",          0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("ata6286",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6286__",          0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("ata6289",          ARCH_AVR4, AVR_ISA_NONE, "__AVR_ATA6289__",           0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("ata6612c",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATA6612C__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega8",          ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8__",          0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("atmega8a",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8A__",         0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("atmega48",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48__",         0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("atmega48a",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48A__",        0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("atmega48p",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48P__",        0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("atmega48pa",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48PA__",       0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("atmega48pb",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega48PB__",       0x0100, 0x0, 0, 0x1000)
++AVR_MCU ("atmega88",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega88a",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88A__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega88p",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88P__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega88pa",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88PA__",       0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega88pb",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega88PB__",       0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("atmega8515",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8515__",       0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("atmega8535",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8535__",       0x0060, 0x0, 0, 0x2000)
++AVR_MCU ("atmega8hva",       ARCH_AVR4, AVR_ISA_NONE,  "__AVR_ATmega8HVA__",       0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm1",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM1__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm2",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM2__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm2b",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM2B__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm3",         ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM3__",         0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm3b",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM3B__",        0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("at90pwm81",        ARCH_AVR4, AVR_ISA_NONE,  "__AVR_AT90PWM81__",        0x0100, 0x0, 0, 0x2000)
+ /* Enhanced, > 8K, <= 64K.  */
+-AVR_MCU ("avr5",             ARCH_AVR5, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0x4000)
+-AVR_MCU ("ata5702m322",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5702M322__",       0x0200, 0x0, 0x10000)
+-AVR_MCU ("ata5782",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5782__",           0x0200, 0x8000, 0xd000)
+-AVR_MCU ("ata5790",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790__",           0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata5790n",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790N__",          0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata5791",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5791__",           0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata5795",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5795__",           0x0100, 0x0, 0x2000)
+-AVR_MCU ("ata5831",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5831__",           0x0200, 0x8000, 0xd000)
+-AVR_MCU ("ata6613c",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6613C__",          0x0100, 0x0, 0x4000)
+-AVR_MCU ("ata6614q",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6614Q__",          0x0100, 0x0, 0x8000)
+-AVR_MCU ("ata8210",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA8210__",           0x0200, 0x8000, 0xd000)
+-AVR_MCU ("ata8510",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA8510__",           0x0200, 0x8000, 0xd000)
+-AVR_MCU ("atmega16",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16__",          0x0060, 0x0, 0x4000)
+-AVR_MCU ("atmega16a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16A__",         0x0060, 0x0, 0x4000)
+-AVR_MCU ("atmega161",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega161__",         0x0060, 0x0, 0x4000)
+-AVR_MCU ("atmega162",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega162__",         0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega163",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega163__",         0x0060, 0x0, 0x4000)
+-AVR_MCU ("atmega164a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164A__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega164p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164P__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega164pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164PA__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega165",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165__",         0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega165a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165A__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega165p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165P__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega165pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165PA__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega168",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168__",         0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega168a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168A__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega168p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168P__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega168pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PA__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega168pb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PB__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega169",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169__",         0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega169a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169A__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega169p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169P__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega169pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169PA__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega16hvb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVB__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega16hvbrevb",  ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVBREVB__",   0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega16m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16M1__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega16u4",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16U4__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega32a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32A__",         0x0060, 0x0, 0x8000)
+-AVR_MCU ("atmega32",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32__",          0x0060, 0x0, 0x8000)
+-AVR_MCU ("atmega323",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega323__",         0x0060, 0x0, 0x8000)
+-AVR_MCU ("atmega324a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324A__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega324p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324P__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega324pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324PA__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega325",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325__",         0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega325a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325A__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega325p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325P__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega325pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325PA__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3250",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3250a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250A__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3250p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250P__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3250pa",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250PA__",      0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega328",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328__",         0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega328p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328P__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega328pb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328PB__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega329",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329__",         0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega329a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329A__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega329p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329P__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega329pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329PA__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3290",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3290a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290A__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3290p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290P__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega3290pa",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290PA__",      0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega32c1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32C1__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega32m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32M1__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega32u4",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U4__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega32u6",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U6__",        0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega406",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega406__",         0x0100, 0x0, 0xa000)
+-AVR_MCU ("atmega64",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64__",          0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64A__",         0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega640",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega640__",         0x0200, 0x0, 0x10000)
+-AVR_MCU ("atmega644",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644__",         0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega644a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644A__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega644p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644P__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega644pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644PA__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega645",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645__",         0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega645a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645A__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega645p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645P__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega6450",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega6450a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450A__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega6450p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450P__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega649",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649__",         0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega649a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649A__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega649p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649P__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega6490",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega16hva",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA__",       0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega16hva2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA2__",      0x0100, 0x0, 0x4000)
+-AVR_MCU ("atmega32hvb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVB__",       0x0100, 0x0, 0x8000)
+-AVR_MCU ("atmega6490a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490A__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega6490p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490P__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64c1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64C1__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64M1__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64hve",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE__",       0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64hve2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE2__",      0x0100, 0x0, 0x10000)
+-AVR_MCU ("atmega64rfr2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64RFR2__",      0x0200, 0x0, 0x10000)
+-AVR_MCU ("atmega644rfr2",    ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644RFR2__",     0x0200, 0x0, 0x10000)
+-AVR_MCU ("atmega32hvbrevb",  ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVBREVB__",   0x0100, 0x0, 0x8000)
+-AVR_MCU ("at90can32",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN32__",         0x0100, 0x0, 0x8000)
+-AVR_MCU ("at90can64",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN64__",         0x0100, 0x0, 0x10000)
+-AVR_MCU ("at90pwm161",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM161__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("at90pwm216",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM216__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("at90pwm316",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM316__",        0x0100, 0x0, 0x4000)
+-AVR_MCU ("at90scr100",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90SCR100__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("at90usb646",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB646__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("at90usb647",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB647__",        0x0100, 0x0, 0x10000)
+-AVR_MCU ("at94k",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT94K__",             0x0060, 0x0, 0x8000)
+-AVR_MCU ("m3000",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_M3000__",             0x1000, 0x0, 0x10000)
++AVR_MCU ("avr5",             ARCH_AVR5, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0, 0x4000)
++AVR_MCU ("ata5702m322",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5702M322__",       0x0200, 0x0, 0, 0x10000)
++AVR_MCU ("ata5782",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5782__",           0x0200, 0x8000, 0, 0xd000)
++AVR_MCU ("ata5790",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790__",           0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata5790n",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5790N__",          0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata5791",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5791__",           0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata5795",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5795__",           0x0100, 0x0, 0, 0x2000)
++AVR_MCU ("ata5831",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA5831__",           0x0200, 0x8000, 0, 0xd000)
++AVR_MCU ("ata6613c",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6613C__",          0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("ata6614q",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA6614Q__",          0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("ata8210",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA8210__",           0x0200, 0x8000, 0, 0xd000)
++AVR_MCU ("ata8510",          ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATA8510__",           0x0200, 0x8000, 0, 0xd000)
++AVR_MCU ("atmega16",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16__",          0x0060, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16A__",         0x0060, 0x0, 0, 0x4000)
++AVR_MCU ("atmega161",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega161__",         0x0060, 0x0, 0, 0x4000)
++AVR_MCU ("atmega162",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega162__",         0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega163",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega163__",         0x0060, 0x0, 0, 0x4000)
++AVR_MCU ("atmega164a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164A__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega164p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164P__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega164pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega164PA__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega165",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165__",         0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega165a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165A__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega165p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165P__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega165pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega165PA__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega168",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168__",         0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega168a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168A__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega168p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168P__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega168pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PA__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega168pb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega168PB__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega169",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169__",         0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega169a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169A__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega169p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169P__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega169pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega169PA__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16hvb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVB__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16hvbrevb",  ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVBREVB__",   0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16M1__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16u4",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16U4__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega32a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32A__",         0x0060, 0x0, 0, 0x8000)
++AVR_MCU ("atmega32",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32__",          0x0060, 0x0, 0, 0x8000)
++AVR_MCU ("atmega323",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega323__",         0x0060, 0x0, 0, 0x8000)
++AVR_MCU ("atmega324a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324A__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega324p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324P__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega324pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega324PA__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega325",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325__",         0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega325a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325A__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega325p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325P__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega325pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega325PA__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3250",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3250a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250A__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3250p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250P__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3250pa",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3250PA__",      0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega328",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328__",         0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega328p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328P__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega328pb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega328PB__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega329",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329__",         0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega329a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329A__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega329p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329P__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega329pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega329PA__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3290",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3290a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290A__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3290p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290P__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega3290pa",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega3290PA__",      0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega32c1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32C1__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega32m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32M1__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega32u4",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U4__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega32u6",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32U6__",        0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega406",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega406__",         0x0100, 0x0, 0, 0xa000)
++AVR_MCU ("atmega64",         ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64__",          0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64a",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64A__",         0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega640",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega640__",         0x0200, 0x0, 0, 0x10000)
++AVR_MCU ("atmega644",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644__",         0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega644a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644A__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega644p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644P__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega644pa",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644PA__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega645",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645__",         0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega645a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645A__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega645p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega645P__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega6450",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega6450a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450A__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega6450p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6450P__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega649",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649__",         0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega649a",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649A__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega649p",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega649P__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega6490",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega16hva",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA__",       0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega16hva2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega16HVA2__",      0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("atmega32hvb",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVB__",       0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("atmega6490a",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490A__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega6490p",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega6490P__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64c1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64C1__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64m1",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64M1__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64hve",      ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE__",       0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64hve2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64HVE2__",      0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("atmega64rfr2",     ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega64RFR2__",      0x0200, 0x0, 0, 0x10000)
++AVR_MCU ("atmega644rfr2",    ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega644RFR2__",     0x0200, 0x0, 0, 0x10000)
++AVR_MCU ("atmega32hvbrevb",  ARCH_AVR5, AVR_ISA_NONE, "__AVR_ATmega32HVBREVB__",   0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("at90can32",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN32__",         0x0100, 0x0, 0, 0x8000)
++AVR_MCU ("at90can64",        ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90CAN64__",         0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("at90pwm161",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM161__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("at90pwm216",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM216__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("at90pwm316",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90PWM316__",        0x0100, 0x0, 0, 0x4000)
++AVR_MCU ("at90scr100",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90SCR100__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("at90usb646",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB646__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("at90usb647",       ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT90USB647__",        0x0100, 0x0, 0, 0x10000)
++AVR_MCU ("at94k",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_AT94K__",             0x0060, 0x0, 0, 0x8000)
++AVR_MCU ("m3000",            ARCH_AVR5, AVR_ISA_NONE, "__AVR_M3000__",             0x1000, 0x0, 0, 0x10000)
+ /* Enhanced, == 128K.  */
+-AVR_MCU ("avr51",            ARCH_AVR51, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 0x20000)
+-AVR_MCU ("atmega128",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128__",        0x0100, 0x0, 0x20000)
+-AVR_MCU ("atmega128a",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128A__",       0x0100, 0x0, 0x20000)
+-AVR_MCU ("atmega1280",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1280__",       0x0200, 0x0, 0x20000)
+-AVR_MCU ("atmega1281",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1281__",       0x0200, 0x0, 0x20000)
+-AVR_MCU ("atmega1284",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284__",       0x0100, 0x0, 0x20000)
+-AVR_MCU ("atmega1284p",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284P__",      0x0100, 0x0, 0x20000)
+-AVR_MCU ("atmega128rfa1",    ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFA1__",    0x0200, 0x0, 0x20000)
+-AVR_MCU ("atmega128rfr2",    ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFR2__",    0x0200, 0x0, 0x20000)
+-AVR_MCU ("atmega1284rfr2",   ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284RFR2__",   0x0200, 0x0, 0x20000)
+-AVR_MCU ("at90can128",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90CAN128__",       0x0100, 0x0, 0x20000)
+-AVR_MCU ("at90usb1286",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1286__",      0x0100, 0x0, 0x20000)
+-AVR_MCU ("at90usb1287",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1287__",      0x0100, 0x0, 0x20000)
++AVR_MCU ("avr51",            ARCH_AVR51, AVR_ISA_NONE, NULL,                       0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("atmega128",        ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128__",        0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("atmega128a",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128A__",       0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("atmega1280",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1280__",       0x0200, 0x0, 0, 0x20000)
++AVR_MCU ("atmega1281",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1281__",       0x0200, 0x0, 0, 0x20000)
++AVR_MCU ("atmega1284",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284__",       0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("atmega1284p",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284P__",      0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("atmega128rfa1",    ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFA1__",    0x0200, 0x0, 0, 0x20000)
++AVR_MCU ("atmega128rfr2",    ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega128RFR2__",    0x0200, 0x0, 0, 0x20000)
++AVR_MCU ("atmega1284rfr2",   ARCH_AVR51, AVR_ISA_NONE, "__AVR_ATmega1284RFR2__",   0x0200, 0x0, 0, 0x20000)
++AVR_MCU ("at90can128",       ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90CAN128__",       0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("at90usb1286",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1286__",      0x0100, 0x0, 0, 0x20000)
++AVR_MCU ("at90usb1287",      ARCH_AVR51, AVR_ISA_NONE, "__AVR_AT90USB1287__",      0x0100, 0x0, 0, 0x20000)
+ /* 3-Byte PC.  */
+-AVR_MCU ("avr6",             ARCH_AVR6, AVR_ISA_NONE, NULL,                        0x0200, 0x0, 0x40000)
+-AVR_MCU ("atmega2560",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2560__",        0x0200, 0x0, 0x40000)
+-AVR_MCU ("atmega2561",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2561__",        0x0200, 0x0, 0x40000)
+-AVR_MCU ("atmega256rfr2",    ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega256RFR2__",     0x0200, 0x0, 0x40000)
+-AVR_MCU ("atmega2564rfr2",   ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2564RFR2__",    0x0200, 0x0, 0x40000)
++AVR_MCU ("avr6",             ARCH_AVR6, AVR_ISA_NONE, NULL,                        0x0200, 0x0, 0, 0x40000)
++AVR_MCU ("atmega2560",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2560__",        0x0200, 0x0, 0, 0x40000)
++AVR_MCU ("atmega2561",       ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2561__",        0x0200, 0x0, 0, 0x40000)
++AVR_MCU ("atmega256rfr2",    ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega256RFR2__",     0x0200, 0x0, 0, 0x40000)
++AVR_MCU ("atmega2564rfr2",   ARCH_AVR6, AVR_ISA_NONE, "__AVR_ATmega2564RFR2__",    0x0200, 0x0, 0, 0x40000)
+ /* Xmega, 16K <= Flash < 64K, RAM <= 64K */
+-AVR_MCU ("avrxmega2",        ARCH_AVRXMEGA2, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega8e5",       ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega8E5__",   0x2000, 0x0, 0x2800)
+-AVR_MCU ("atxmega16a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16A4__",  0x2000, 0x0, 0x5000)
+-AVR_MCU ("atxmega16d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16D4__",  0x2000, 0x0, 0x5000)
+-AVR_MCU ("atxmega16e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16E5__",  0x2000, 0x0, 0x5000)
+-AVR_MCU ("atxmega32a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32A4__",  0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega32c3",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C3__",  0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega32d3",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D3__",  0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega32d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D4__",  0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega16a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16A4U__", 0x2000, 0x0, 0x5000)
+-AVR_MCU ("atxmega16c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16C4__",  0x2000, 0x0, 0x5000)
+-AVR_MCU ("atxmega32a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32A4U__", 0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega32c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C4__",  0x2000, 0x0, 0x9000)
+-AVR_MCU ("atxmega32e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32E5__",  0x2000, 0x0, 0x9000)
++AVR_MCU ("avrxmega2",        ARCH_AVRXMEGA2, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega8e5",       ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega8E5__",   0x2000, 0x0, 0, 0x2800)
++AVR_MCU ("atxmega16a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16A4__",  0x2000, 0x0, 0, 0x5000)
++AVR_MCU ("atxmega16d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16D4__",  0x2000, 0x0, 0, 0x5000)
++AVR_MCU ("atxmega16e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega16E5__",  0x2000, 0x0, 0, 0x5000)
++AVR_MCU ("atxmega32a4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32A4__",  0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega32c3",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C3__",  0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega32d3",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D3__",  0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega32d4",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32D4__",  0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega16a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16A4U__", 0x2000, 0x0, 0, 0x5000)
++AVR_MCU ("atxmega16c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega16C4__",  0x2000, 0x0, 0, 0x5000)
++AVR_MCU ("atxmega32a4u",     ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32A4U__", 0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega32c4",      ARCH_AVRXMEGA2, AVR_ISA_RMW,  "__AVR_ATxmega32C4__",  0x2000, 0x0, 0, 0x9000)
++AVR_MCU ("atxmega32e5",      ARCH_AVRXMEGA2, AVR_ISA_NONE, "__AVR_ATxmega32E5__",  0x2000, 0x0, 0, 0x9000)
+ /* Xmega, 64K < Flash <= 128K, RAM <= 64K */
+-AVR_MCU ("avrxmega4",        ARCH_AVRXMEGA4, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64a3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64A3__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64d3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D3__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64a3u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A3U__", 0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64a4u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A4U__", 0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64b1",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B1__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64b3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B3__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64c3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64C3__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64d4",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D4__",  0x2000, 0x0, 0x11000)
++AVR_MCU ("avrxmega4",        ARCH_AVRXMEGA4, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64a3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64A3__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64d3",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D3__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64a3u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A3U__", 0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64a4u",     ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64A4U__", 0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64b1",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B1__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64b3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64B3__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64c3",      ARCH_AVRXMEGA4, AVR_ISA_RMW,  "__AVR_ATxmega64C3__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64d4",      ARCH_AVRXMEGA4, AVR_ISA_NONE, "__AVR_ATxmega64D4__",  0x2000, 0x0, 0, 0x11000)
+ /* Xmega, 64K < Flash <= 128K, RAM > 64K */
+-AVR_MCU ("avrxmega5",        ARCH_AVRXMEGA5, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64a1",      ARCH_AVRXMEGA5, AVR_ISA_NONE, "__AVR_ATxmega64A1__",  0x2000, 0x0, 0x11000)
+-AVR_MCU ("atxmega64a1u",     ARCH_AVRXMEGA5, AVR_ISA_RMW,  "__AVR_ATxmega64A1U__", 0x2000, 0x0, 0x11000)
++AVR_MCU ("avrxmega5",        ARCH_AVRXMEGA5, AVR_ISA_NONE, NULL,                   0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64a1",      ARCH_AVRXMEGA5, AVR_ISA_NONE, "__AVR_ATxmega64A1__",  0x2000, 0x0, 0, 0x11000)
++AVR_MCU ("atxmega64a1u",     ARCH_AVRXMEGA5, AVR_ISA_RMW,  "__AVR_ATxmega64A1U__", 0x2000, 0x0, 0, 0x11000)
+ /* Xmega, 128K < Flash, RAM <= 64K */
+-AVR_MCU ("avrxmega6",        ARCH_AVRXMEGA6, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 0x60000)
+-AVR_MCU ("atxmega128a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128A3__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D3__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega192a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192A3__",     0x2000, 0x0, 0x32000)
+-AVR_MCU ("atxmega192d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192D3__",     0x2000, 0x0, 0x32000)
+-AVR_MCU ("atxmega256a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3__",     0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega256a3b",    ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3B__",    0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega256a3bu",   ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3BU__",   0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega256d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256D3__",     0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega128a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128A3U__",    0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128b1",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B1__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128b3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B3__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128C3__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128d4",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D4__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega192a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192A3U__",    0x2000, 0x0, 0x32000)
+-AVR_MCU ("atxmega192c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192C3__",     0x2000, 0x0, 0x32000)
+-AVR_MCU ("atxmega256a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3U__",    0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega256c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256C3__",     0x2000, 0x0, 0x42000)
+-AVR_MCU ("atxmega384c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega384C3__",     0x2000, 0x0, 0x62000)
+-AVR_MCU ("atxmega384d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega384D3__",     0x2000, 0x0, 0x62000)
++AVR_MCU ("avrxmega6",        ARCH_AVRXMEGA6, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 0, 0x60000)
++AVR_MCU ("atxmega128a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128A3__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D3__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega192a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192A3__",     0x2000, 0x0, 0, 0x32000)
++AVR_MCU ("atxmega192d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega192D3__",     0x2000, 0x0, 0, 0x32000)
++AVR_MCU ("atxmega256a3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3__",     0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega256a3b",    ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3B__",    0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega256a3bu",   ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256A3BU__",   0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega256d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega256D3__",     0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega128a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128A3U__",    0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128b1",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B1__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128b3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128B3__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega128C3__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128d4",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega128D4__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega192a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192A3U__",    0x2000, 0x0, 0, 0x32000)
++AVR_MCU ("atxmega192c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega192C3__",     0x2000, 0x0, 0, 0x32000)
++AVR_MCU ("atxmega256a3u",    ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256A3U__",    0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega256c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega256C3__",     0x2000, 0x0, 0, 0x42000)
++AVR_MCU ("atxmega384c3",     ARCH_AVRXMEGA6, AVR_ISA_RMW,  "__AVR_ATxmega384C3__",     0x2000, 0x0, 0, 0x62000)
++AVR_MCU ("atxmega384d3",     ARCH_AVRXMEGA6, AVR_ISA_NONE, "__AVR_ATxmega384D3__",     0x2000, 0x0, 0, 0x62000)
+ /* Xmega, 128K < Flash, RAM > 64K RAM.  */
+-AVR_MCU ("avrxmega7",        ARCH_AVRXMEGA7, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128a1",     ARCH_AVRXMEGA7, AVR_ISA_NONE, "__AVR_ATxmega128A1__",     0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128a1u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A1U__",    0x2000, 0x0, 0x22000)
+-AVR_MCU ("atxmega128a4u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A4U__",    0x2000, 0x0, 0x22000)
++AVR_MCU ("avrxmega7",        ARCH_AVRXMEGA7, AVR_ISA_NONE, NULL,                       0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128a1",     ARCH_AVRXMEGA7, AVR_ISA_NONE, "__AVR_ATxmega128A1__",     0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128a1u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A1U__",    0x2000, 0x0, 0, 0x22000)
++AVR_MCU ("atxmega128a4u",    ARCH_AVRXMEGA7, AVR_ISA_RMW,  "__AVR_ATxmega128A4U__",    0x2000, 0x0, 0, 0x22000)
+ /* Tiny family */
+-AVR_MCU ("avrtiny",          ARCH_AVRTINY, AVR_ISA_NONE, NULL,                     0x0040, 0x0, 0x400)
+-AVR_MCU ("attiny4",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny4__",        0x0040, 0x0, 0x200)
+-AVR_MCU ("attiny5",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny5__",        0x0040, 0x0, 0x200)
+-AVR_MCU ("attiny9",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny9__",        0x0040, 0x0, 0x400)
+-AVR_MCU ("attiny10",         ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny10__",       0x0040, 0x0, 0x400)
+-AVR_MCU ("attiny20",         ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny20__",       0x0040, 0x0, 0x800)
+-AVR_MCU ("attiny40",         ARCH_AVRTINY, AVR_ISA_NONE, "__AVR_ATtiny40__",       0x0040, 0x0, 0x1000)
++AVR_MCU ("avrtiny",          ARCH_AVRTINY, AVR_ISA_NONE, NULL,                     0x0040, 0x0, 0, 0x400)
++AVR_MCU ("attiny4",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny4__",        0x0040, 0x0, 0, 0x200)
++AVR_MCU ("attiny5",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny5__",        0x0040, 0x0, 0, 0x200)
++AVR_MCU ("attiny9",          ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny9__",        0x0040, 0x0, 0, 0x400)
++AVR_MCU ("attiny10",         ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny10__",       0x0040, 0x0, 0, 0x400)
++AVR_MCU ("attiny20",         ARCH_AVRTINY, AVR_ISA_LDS,  "__AVR_ATtiny20__",       0x0040, 0x0, 0, 0x800)
++AVR_MCU ("attiny40",         ARCH_AVRTINY, AVR_ISA_NONE, "__AVR_ATtiny40__",       0x0040, 0x0, 0, 0x1000)
+ /* Assembler only.  */
+-AVR_MCU ("avr1",             ARCH_AVR1, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0x400)
+-AVR_MCU ("at90s1200",        ARCH_AVR1, AVR_ISA_NONE, "__AVR_AT90S1200__",         0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny11",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny11__",          0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny12",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny12__",          0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny15",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny15__",          0x0060, 0x0, 0x400)
+-AVR_MCU ("attiny28",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny28__",          0x0060, 0x0, 0x800)
++AVR_MCU ("avr1",             ARCH_AVR1, AVR_ISA_NONE, NULL,                        0x0060, 0x0, 0, 0x400)
++AVR_MCU ("at90s1200",        ARCH_AVR1, AVR_ISA_NONE, "__AVR_AT90S1200__",         0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny11",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny11__",          0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny12",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny12__",          0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny15",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny15__",          0x0060, 0x0, 0, 0x400)
++AVR_MCU ("attiny28",         ARCH_AVR1, AVR_ISA_NONE, "__AVR_ATtiny28__",          0x0060, 0x0, 0, 0x800)
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-mcus.def.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-mcus.def.rej
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.md.orig
+diff -ur gcc/gcc/config/avr/avr.opt gcc-7.3.0-patched/gcc/config/avr/avr.opt
+--- gcc/gcc/config/avr/avr.opt	2017-01-09 22:48:33.107036000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr.opt	2018-11-29 15:40:15.272300988 +0100
+@@ -30,6 +30,10 @@
+ Target RejectNegative Joined Var(avr_n_flash) UInteger Init(-1)
+ Set the number of 64 KiB flash segments.
+ 
++mnon-bit-addressable-registers-mask=
++Target Report Joined Var(avr_deferred_options) Defer
++Set the 32 bit mask for non bit addressable registers.
++
+ mskip-bug
+ Target Report Mask(SKIP_BUG)
+ Indicate presence of a processor erratum.
+@@ -44,6 +48,10 @@
+ mlog=
+ Target RejectNegative Joined Undocumented Var(avr_log_details)
+ 
++mshort-calls
++Target Report RejectNegative Mask(SHORT_CALLS)
++Use RJMP / RCALL even though CALL / JMP are available.
++
+ mint8
+ Target Report Mask(INT8)
+ Use an 8-bit 'int' type.
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.opt.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: avr.opt.rej
+diff -ur gcc/gcc/config/avr/avr-protos.h gcc-7.3.0-patched/gcc/config/avr/avr-protos.h
+--- gcc/gcc/config/avr/avr-protos.h	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/avr-protos.h	2018-11-29 15:40:15.272300988 +0100
+@@ -183,3 +183,4 @@
+ } avr_log_t;
+ 
+ extern avr_log_t avr_log;
++extern unsigned long avr_non_bit_addressable_registers_mask;
+Only in gcc-7.3.0-patched/gcc/config/avr: avr-protos.h.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: driver-avr.c.rej
+diff -ur gcc/gcc/config/avr/gen-avr-mmcu-specs.c gcc-7.3.0-patched/gcc/config/avr/gen-avr-mmcu-specs.c
+--- gcc/gcc/config/avr/gen-avr-mmcu-specs.c	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/gen-avr-mmcu-specs.c	2018-12-03 11:07:38.331430937 +0100
+@@ -113,6 +113,7 @@
+ print_mcu (const avr_mcu_t *mcu)
+ {
+   const char *sp8_spec;
++  const char *rcall_spec;
+   const avr_mcu_t *arch_mcu;
+   const avr_arch_t *arch;
+   enum avr_arch_id arch_id = mcu->arch_id;
+@@ -134,6 +135,7 @@
+   bool errata_skip = 0 != (mcu->dev_attribute & AVR_ERRATA_SKIP);
+   bool rmw = 0 != (mcu->dev_attribute & AVR_ISA_RMW);
+   bool sp8 = 0 != (mcu->dev_attribute & AVR_SHORT_SP);
++  bool rcall = (mcu->dev_attribute & AVR_ISA_RCALL);
+   bool is_arch = NULL == mcu->macro;
+   bool is_device = ! is_arch;
+ 
+@@ -150,13 +152,25 @@
+       sp8_spec = sp8 ? "-msp8" :"%<msp8";
+     }
+ 
++  if (is_arch
++      && ARCH_AVRXMEGA3 == arch_id)
++    {
++      // Leave "avrxmega3" alone.  This architectures is the only one
++      // that mixes devices with and without JMP / CALL.
++      rcall_spec = "";
++    }
++  else
++    {
++      rcall_spec = rcall ? "-mshort-calls" : "%<mshort-calls";
++    }
++
+   fprintf (f, "#\n"
+            "# Auto-generated specs for AVR ");
+   if (is_arch)
+     fprintf (f, "core architecture %s\n", arch->name);
+   else
+-    fprintf (f, "device %s (core %s, %d-bit SP)\n",
+-             mcu->name, arch->name, sp8 ? 8 : 16);
++    fprintf (f, "device %s (core %s, %d-bit SP%s)\n",
++             mcu->name, arch->name, sp8 ? 8 : 16, rcall ? ", short-calls" : "");
+   fprintf (f, "%s\n", header);
+ 
+   if (is_device)
+@@ -196,6 +210,15 @@
+            ? "\t%{!mno-absdata: -mabsdata}"
+            : "\t%{mabsdata}");
+ 
++  if (mcu->non_bit_addressable_registers_mask)
++    fprintf (f, "*cc1_non_bit_addressable_registers_mask:\n"
++                "\t-mnon-bit-addressable-registers-mask=%#x\n\n",
++                mcu->non_bit_addressable_registers_mask);
++
++  fprintf (f, "*cc1_absdata:\n%s\n\n", absdata
++           ? "\t%{!mno-absdata: -mabsdata}"
++           : "\t%{mabsdata}");
++
+   // avr-gcc specific specs for assembling / the assembler.
+ 
+   fprintf (f, "*asm_arch:\n\t-mmcu=%s\n\n", arch->name);
+@@ -255,6 +278,7 @@
+     {
+       fprintf (f, "*self_spec:\n");
+       fprintf (f, "\t%%{!mmcu=avr*: %%<mmcu=* -mmcu=%s} ", arch->name);
++      fprintf (f, "%s ", rcall_spec);
+       fprintf (f, "%s\n\n", sp8_spec);
+ 
+ #if defined (WITH_AVRLIBC)
+Only in gcc-7.3.0-patched/gcc/config/avr: gen-avr-mmcu-specs.c.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: gen-avr-mmcu-specs.c.rej
+diff -ur gcc/gcc/config/avr/genmultilib.awk gcc-7.3.0-patched/gcc/config/avr/genmultilib.awk
+--- gcc/gcc/config/avr/genmultilib.awk	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/genmultilib.awk	2018-11-29 15:40:16.878967668 +0100
+@@ -22,23 +22,31 @@
+ # Representation that is understood by GCC's multilib Machinery.
+ #
+ # The Script works as a Filter from STDIN to STDOUT.
+-# 
+-# FORMAT = "Makefile": Generate Makefile Snipet that sets some
+-#                      MULTILIB_* Variables as needed.
++# It generates a Makefile Snippet that sets some
++# MULTILIB_* Variables as needed.
+ #
+ ##################################################################
+ 
+ BEGIN {
+     FS ="[(, \t]+"
+     option[""] = ""
+-    tiny_stack[""] = 1
+     comment = 1
+-    n_mcu = 0
+-    n_cores = 0
+ 
+-    mtiny[0] = ""
+-    mtiny[1] = "tiny-stack"
+-    option["tiny-stack"] = "msp8"
++    dir_tiny = "tiny-stack"
++    opt_tiny = "msp8"
++
++    dir_rcall = "short-calls"
++    opt_rcall = "mshort-calls"
++
++    #    awk Variable         Makefile Variable  
++    #  ------------------------------------------
++    #    m_options     <->    MULTILIB_OPTIONS
++    #    m_dirnames    <->    MULTILIB_DIRNAMES
++    #    m_required    <->    MULTILIB_REQUIRED
++    m_sep = ""
++    m_options    = "\nMULTILIB_OPTIONS = "
++    m_dirnames   = "\nMULTILIB_DIRNAMES ="
++    m_required   = "\nMULTILIB_REQUIRED ="
+ }
+ 
+ ##################################################################
+@@ -51,14 +59,11 @@
+ 	next
+     else if (comment == 1)
+     {
+-	if (FORMAT == "Makefile")
+-	{
+-	    print "# Auto-generated Makefile Snip"
+-	    print "# Generated by    : ./gcc/config/avr/genmultilib.awk"
+-	    print "# Generated from  : ./gcc/config/avr/avr-mcus.def"
+-	    print "# Used by         : tmake_file from Makefile and genmultilib"
+-	    print ""
+-	}
++	print "# Auto-generated Makefile Snip"
++	print "# Generated by    : ./gcc/config/avr/genmultilib.awk"
++	print "# Generated from  : ./gcc/config/avr/avr-mcus.def"
++	print "# Used by         : tmake_file from Makefile and genmultilib"
++	print ""
+     }
+ 
+     comment = 2;
+@@ -74,12 +79,10 @@
+ }
+ 
+ ##################################################################
+-# Run over all AVR_MCU Lines and gather Information:
+-# cores[]     : Enumerates the Cores (avr2, avr25, ...)
+-# mcu[]       : Enumerates the Devices
+-# tiny_stack[]: Maps Core/Device to 0 (2-byte SP) or 1 (1-byte SP)
+-# option[]    : Maps Core/Device to the mmcu= option to get it
+-# toCore[]    : Maps Device to its Core
++# Run over all AVR_MCU Lines.  If we encounter a required multilib
++# variant, add according combination of options to m_required,
++# but onyl once.  Add encountered cores to m_dirnames and
++# according -mmcu= options to m_options.
+ ##################################################################
+ 
+ /^AVR_MCU/ {
+@@ -94,11 +97,12 @@
+ 	if (core == "avr1")
+ 	    next
+ 
+-	cores[n_cores] = core
+-	n_cores++
+-	tiny_stack[core] = 0
+ 	option[core] = "mmcu=" core
+ 
++	m_options  = m_options m_sep option[core]
++	m_dirnames = m_dirnames " " core
++	m_sep = "/"
++
+ 	next
+     }
+ 
+@@ -106,116 +110,42 @@
+     if (core == "avr1")
+ 	next
+ 
++    opts = option[core]
++
+     # split device specific feature list
+     n = split($4,dev_attribute,"|")
+ 
+-    # set tiny_stack false by default
+-    tiny_stack[name] = 0
+     for (i=1; i <= n; i++)
+-      if (dev_attribute[i] == "AVR_SHORT_SP") {
+-        tiny_stack[name]  = 1
+-        break
+-      }
+-
+-    mcu[n_mcu] = name
+-    n_mcu++
+-    option[name]      = "mmcu=" name
+-    toCore[name]      = core
++    {
++      if (dev_attribute[i] == "AVR_SHORT_SP")
++        opts = opts "/" opt_tiny
++      if (dev_attribute[i] == "AVR_ISA_RCALL")
++        opts = opts "/" opt_rcall
++    }
+ 
+-    if (tiny_stack[name] == 1)
+-	tiny_stack[core] = 1
++    if (!have[opts])
++    {
++	have[opts] = 1
++	# Some special handling for the default mmcu: Remove a
++	# leading "mmcu=avr2/" in order not to confuse genmultilib.
++	opts = gensub (/mmcu=avr2\//, "", 1, opts)
++	if (opts != "mmcu=avr2")
++	    m_required = m_required " \\\n\t" opts
++    }
+ }
+ 
+ ##################################################################
+ # 
+-# We gathered all the Information, now build/output the following:
+-#
+-#    awk Variable         target Variable          FORMAT
+-#  -----------------------------------------------------------
+-#    m_options     <->    MULTILIB_OPTIONS         Makefile
+-#    m_dirnames    <->    MULTILIB_DIRNAMES           "
+-#    m_exceptions  <->    MULTILIB_EXCEPTIONS         "
+-#
+ ##################################################################
+ 
+ END {
+-    m_options    = "\nMULTILIB_OPTIONS = "
+-    m_dirnames   = "\nMULTILIB_DIRNAMES ="
+-    m_exceptions = "\nMULTILIB_EXCEPTIONS ="
+-
+-    ##############################################################
+-    # Compose MULTILIB_OPTIONS.  This represents the Cross-Product
+-    #    (avr2, avr25, ...) x msp8
+-
+-    sep = ""
+-    for (c = 0; c < n_cores; c++)
+-    {
+-	m_options = m_options sep option[cores[c]]
+-	sep = "/"
+-    }
+-
+-    # The ... x msp8
+-    m_options = m_options " " option[mtiny[1]]
+-
+-    ##############################################################
+-    # Map Device to its multilib
+-
+-    for (t = 0; t < n_mcu; t++)
+-    {
+-	core = toCore[mcu[t]]
+-	
+-	line = option[core] ":" option[mcu[t]]
+-	gsub ("=", "?", line)
+-	gsub (":", "=", line)
+-    }
+-
+-    ####################################################################
+-    # Compose MULTILIB_DIRNAMES and MULTILIB_EXEPTIONS
+-
+-    n_mtiny = 2
+-    for (t = 0; t < n_mtiny; t++)
+-	for (c = -1; c < n_cores; c++)
+-	{
+-	    if (c == -1)
+-		core = ""
+-	    else
+-		core = cores[c]
+-
+-	    # The Directory Name for this multilib
+-
+-	    if (core != "" && mtiny[t] != "")
+-	    {
+-		mdir = core "/" mtiny[t]
+-		mopt = option[core] "/" option[mtiny[t]]
+-	    }
+-	    else
+-	    {
+-		mdir = core mtiny[t]
+-		mopt = option[core] option[mtiny[t]]
+-	    }
+-
+-	    if (core != "" && tiny_stack[core] == 0 && mtiny[t] != "")
+-	    {
+-		# There's not a single SP = 8 Devices for this Core:
+-		# Don't build respective multilib
+-		m_exceptions = m_exceptions " \\\n\t" mopt
+-		continue
+-	    }
+-
+-	    if (core != "avr2" || mtiny[t] == "")
+-		m_dirnames = m_dirnames " " mdir
+-	}
+-
+     ############################################################
+     # Output that Stuff
+     ############################################################
+ 
+-    if (FORMAT == "Makefile")
+-    {
+-	# Intended Target: ./gcc/config/avr/t-multilib
++    # Intended Target: ./gcc/config/avr/t-multilib
+ 
+-	print m_options
+-	print m_dirnames
+-	print m_exceptions
+-    }
++    print m_options  " " opt_tiny " " opt_rcall
++    print m_dirnames " " dir_tiny " " dir_rcall
++    print m_required
+ }
+diff -ur gcc/gcc/config/avr/predicates.md gcc-7.3.0-patched/gcc/config/avr/predicates.md
+--- gcc/gcc/config/avr/predicates.md	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/predicates.md	2018-11-29 15:40:16.878967668 +0100
+@@ -42,11 +42,13 @@
+   (and (match_code "reg")
+        (match_test "REGNO (op) == REG_SP")))
+ 
+-;; Return true if OP is a valid address for lower half of I/O space.
++;; Return true if OP is a valid address for lower half of I/O space
++;; and it is bit addressable
+ (define_special_predicate "low_io_address_operand"
+   (ior (and (match_code "const_int")
+ 	    (match_test "IN_RANGE (INTVAL (op) - avr_arch->sfr_offset,
+-				   0, 0x1F)"))
++				   0, 0x1F) &&
++         (((1 << (INTVAL (op) - avr_arch->sfr_offset)) & avr_non_bit_addressable_registers_mask) == 0)"))
+        (and (match_code "symbol_ref")
+ 	    (match_test "SYMBOL_REF_FLAGS (op) & SYMBOL_FLAG_IO_LOW"))))
+ 
+Only in gcc-7.3.0-patched/gcc/config/avr: specs.h.orig
+Only in gcc-7.3.0-patched/gcc/config/avr: specs.h.rej
+diff -ur gcc/gcc/config/avr/t-avr gcc-7.3.0-patched/gcc/config/avr/t-avr
+--- gcc/gcc/config/avr/t-avr	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/t-avr	2018-11-29 15:40:16.878967668 +0100
+@@ -89,14 +89,13 @@
+ 		$(INSTALL_DATA) $${file} $(DESTDIR)$(libsubdir)/$${file}; \
+ 	done
+ 
+-# Map -mmcu= to the right multilib variant
++# Get multilib layout
+ # MULTILIB_OPTIONS
+ # MULTILIB_DIRNAMES
+-# MULTILIB_EXCEPTIONS
+-# MULTILIB_MATCHES
++# MULTILIB_REQUIRED
+ 
+ s-mlib: $(srcdir)/config/avr/t-multilib
+ 
+ $(srcdir)/config/avr/t-multilib: $(srcdir)/config/avr/genmultilib.awk \
+ 				 $(AVR_MCUS)
+-	$(AWK) -f $< -v FORMAT=Makefile   $< $(AVR_MCUS) > $@
++	$(AWK) -f $< $< $(AVR_MCUS) > $@
+Only in gcc-7.3.0-patched/gcc/config/avr: t-avr.orig
+diff -ur gcc/gcc/config/avr/t-multilib gcc-7.3.0-patched/gcc/config/avr/t-multilib
+--- gcc/gcc/config/avr/t-multilib	2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/t-multilib	2018-11-29 16:08:58.825647392 +0100
+@@ -21,21 +21,24 @@
+ # along with GCC; see the file COPYING3.  If not see
+ # <http://www.gnu.org/licenses/>.
+ 
+-MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8
++MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8 mshort-calls
+ 
+-MULTILIB_DIRNAMES =  avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack avr25/tiny-stack
++MULTILIB_DIRNAMES = avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack short-calls
+ 
+-MULTILIB_EXCEPTIONS = \
+-	mmcu=avr3/msp8 \
+-	mmcu=avr31/msp8 \
+-	mmcu=avr35/msp8 \
+-	mmcu=avr4/msp8 \
+-	mmcu=avr5/msp8 \
+-	mmcu=avr51/msp8 \
+-	mmcu=avr6/msp8 \
+-	mmcu=avrxmega2/msp8 \
+-	mmcu=avrxmega4/msp8 \
+-	mmcu=avrxmega5/msp8 \
+-	mmcu=avrxmega6/msp8 \
+-	mmcu=avrxmega7/msp8 \
+-	mmcu=avrtiny/msp8
++MULTILIB_REQUIRED = \
++	msp8 \
++	mmcu=avr25 \
++	mmcu=avr25/msp8 \
++	mmcu=avr3 \
++	mmcu=avr31 \
++	mmcu=avr35 \
++	mmcu=avr4 \
++	mmcu=avr5 \
++	mmcu=avr51 \
++	mmcu=avr6 \
++	mmcu=avrxmega2 \
++	mmcu=avrxmega4 \
++	mmcu=avrxmega5 \
++	mmcu=avrxmega6 \
++	mmcu=avrxmega7 \
++	mmcu=avrtiny
+diff -ur gcc/gcc/configure gcc-7.3.0-patched/gcc/configure
+--- gcc/gcc/configure	2017-11-21 10:31:12.135035000 +0100
++++ gcc-7.3.0-patched/gcc/configure	2018-11-29 15:40:16.885634334 +0100
+@@ -29085,6 +29085,61 @@
+   || ( test $glibc_version_major -eq 2 && test $glibc_version_minor -ge 23 ); then :
+   gcc_cv_libc_provides_hwcap_in_tcb=yes
+ fi
++
++    # Check how default linker description file implements .rodata for
++    # avrxmega3 (PR21472).  avr-gcc assumes .rodata is *not* loaded to
++    # RAM so avr-gcc skips __do_copy_data for .rodata objects.
++    { $as_echo "$as_me:${as_lineno-$LINENO}: checking binutils for avrxmega3 .rodata support" >&5
++$as_echo_n "checking binutils for avrxmega3 .rodata support... " >&6; }
++    cat > conftest.s <<EOF
++        .section .rodata,"a",@progbits
++        .global xxvaryy
++    ;; avr-nm should print "... R xxvaryy", not "... D xxvaryy".
++    xxvaryy:
++        .word 1
++EOF
++    rm -f conftest.nm
++    { ac_try='$gcc_cv_as -mmcu=avrxmega3 conftest.s -o conftest.o'
++  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
++  test $ac_status = 0; }; }
++    { ac_try='$gcc_cv_ld -mavrxmega3 conftest.o -o conftest.elf'
++  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
++  test $ac_status = 0; }; }
++    { ac_try='$gcc_cv_nm conftest.elf > conftest.nm'
++  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
++  test $ac_status = 0; }; }
++    if test -f conftest.nm
++    then
++	if grep ' R xxvaryy' conftest.nm > /dev/null; then
++	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
++$as_echo "yes" >&6; }
++	    rm -f conftest.s conftest.o conftest.elf conftest.nm
++	else
++	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no: avrxmega3 .rodata located in RAM" >&5
++$as_echo "no: avrxmega3 .rodata located in RAM" >&6; }
++	    echo "$as_me: nm output was" >&5
++	    cat conftest.nm >&5
++	    rm -f conftest.s conftest.o conftest.elf conftest.nm
++	    avr_ld_ver="`$gcc_cv_ld -v | sed -e 's:^.* ::'`"
++	    as_fn_error "support for avrxmega3 needs Binutils 2.29 or higher (have $avr_ld_ver)" "$LINENO" 5
++	fi
++    else
++	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: test failed" >&5
++$as_echo "test failed" >&6; }
++	echo "$as_me: failed program was" >&5
++	cat conftest.s >&5
++	rm -f conftest.s conftest.o conftest.elf
++	as_fn_error "see \`config.log' for details" "$LINENO" 5
++    fi
+     ;;
+ esac
+ if test x$gcc_cv_libc_provides_hwcap_in_tcb = xyes; then
+diff -ur gcc/gcc/configure.ac gcc-7.3.0-patched/gcc/configure.ac
+--- gcc/gcc/configure.ac	2017-11-21 10:31:12.135035000 +0100
++++ gcc-7.3.0-patched/gcc/configure.ac	2018-11-29 15:40:16.885634334 +0100
+@@ -3818,6 +3818,42 @@
+       [-mrmw], [.text],,
+       [AC_DEFINE(HAVE_AS_AVR_MRMW_OPTION, 1,
+ 		[Define if your avr assembler supports -mrmw option.])])
++
++    # Check how default linker description file implements .rodata for
++    # avrxmega3 (PR21472).  avr-gcc assumes .rodata is *not* loaded to
++    # RAM so avr-gcc skips __do_copy_data for .rodata objects.
++    AC_MSG_CHECKING(binutils for avrxmega3 .rodata support)
++    cat > conftest.s <<EOF
++        .section .rodata,"a",@progbits
++        .global xxvaryy
++    ;; avr-nm should print "... R xxvaryy", not "... D xxvaryy".
++    xxvaryy:
++        .word 1
++EOF
++    rm -f conftest.nm
++    AC_TRY_COMMAND([$gcc_cv_as -mmcu=avrxmega3 conftest.s -o conftest.o])
++    AC_TRY_COMMAND([$gcc_cv_ld -mavrxmega3 conftest.o -o conftest.elf])
++    AC_TRY_COMMAND([$gcc_cv_nm conftest.elf > conftest.nm])
++    if test -f conftest.nm
++    then
++	if grep ' R xxvaryy' conftest.nm > /dev/null; then
++	    AC_MSG_RESULT(yes)
++	    rm -f conftest.s conftest.o conftest.elf conftest.nm
++	else
++	    AC_MSG_RESULT(no: avrxmega3 .rodata located in RAM)
++	    echo "$as_me: nm output was" >&AS_MESSAGE_LOG_FD
++	    cat conftest.nm >&AS_MESSAGE_LOG_FD
++	    rm -f conftest.s conftest.o conftest.elf conftest.nm
++	    avr_ld_ver="`$gcc_cv_ld -v | sed -e 's:^.* ::'`"
++	    AC_MSG_ERROR([[support for avrxmega3 needs Binutils 2.29 or higher (have $avr_ld_ver)]])
++	fi
++    else
++	AC_MSG_RESULT(test failed)
++	echo "$as_me: failed program was" >&AS_MESSAGE_LOG_FD
++	cat conftest.s >&AS_MESSAGE_LOG_FD
++	rm -f conftest.s conftest.o conftest.elf
++	AC_MSG_ERROR([[see `config.log' for details]])
++    fi
+     ;;
+ 
+   cris-*-*)
+Only in gcc-7.3.0-patched/gcc: configure.ac.orig
+Only in gcc-7.3.0-patched/gcc: configure.orig
+Only in gcc-7.3.0-patched/gcc/doc: extend.texi.orig
+Only in gcc-7.3.0-patched/gcc/doc: extend.texi.rej
+diff -ur gcc/gcc/doc/invoke.texi gcc-7.3.0-patched/gcc/doc/invoke.texi
+--- gcc/gcc/doc/invoke.texi	2018-01-16 12:22:01.161048000 +0100
++++ gcc-7.3.0-patched/gcc/doc/invoke.texi	2018-12-03 11:09:38.708097088 +0100
+@@ -15542,6 +15542,15 @@
+ Assume that the device supports the Read-Modify-Write
+ instructions @code{XCH}, @code{LAC}, @code{LAS} and @code{LAT}.
+ 
++@item -mshort-calls
++@opindex mshort-calls
++
++Assume that @code{RJMP} and @code{RCALL} can target the whole
++program memory.
++
++This option is used internally for multilib selection.  It is
++not an optimization option, and you don't need to set it by hand.
++
+ @item -msp8
+ @opindex msp8
+ Treat the stack pointer register as an 8-bit register,
+@@ -15802,10 +15811,12 @@
+ 
+ respectively and
+ 
+-@code{100}, @code{102}, @code{104},
++@code{100},
++@code{102}, @code{103}, @code{104},
+ @code{105}, @code{106}, @code{107}
+ 
+-for @var{mcu}=@code{avrtiny}, @code{avrxmega2}, @code{avrxmega4},
++for @var{mcu}=@code{avrtiny},
++@code{avrxmega2}, @code{avrxmega3}, @code{avrxmega4},
+ @code{avrxmega5}, @code{avrxmega6}, @code{avrxmega7}, respectively.
+ If @var{mcu} specifies a device, this built-in macro is set
+ accordingly. For example, with @option{-mmcu=atmega8} the macro is
+@@ -15857,7 +15868,7 @@
+ 
+ @item __AVR_HAVE_JMP_CALL__
+ The device has the @code{JMP} and @code{CALL} instructions.
+-This is the case for devices with at least 16@tie{}KiB of program
++This is the case for devices with more than 8@tie{}KiB of program
+ memory.
+ 
+ @item __AVR_HAVE_EIJMP_EICALL__
+@@ -15914,6 +15925,21 @@
+ to be subtracted from the RAM address in order to get the
+ respective I/O@tie{}address.
+ 
++@item __AVR_SHORT_CALLS__
++The @option{-mshort-calls} command line option is set.
++
++@item __AVR_PM_BASE_ADDRESS__=@var{addr}
++Some devices support reading from flash memory by means of @code{LD*}
++instructions.  The flash memory is seen in the data address space
++at an offset of @code{__AVR_PM_BASE_ADDRESS__}.  If this macro
++is not defined, this feature is not available.  If defined,
++the address space is linear and there is no need to put
++@code{.rodata} into RAM.  This is handled by the default linker
++description file, and is currently available for
++@code{avrtiny} and @code{avrxmega3}.  Even more convenient,
++there is no need to use address spaces like @code{__flash} or
++features like attribute @code{progmem} and @code{pgm_read_*}.
++
+ @item __WITH_AVRLIBC__
+ The compiler is configured to be used together with AVR-Libc.
+ See the @option{--with-avrlibc} configure option.
+Only in gcc-7.3.0-patched/gcc/doc: invoke.texi.orig
+diff -ur gcc/gcc/ira.c gcc-7.3.0-patched/gcc/ira.c
+--- gcc/gcc/ira.c	2017-10-18 23:13:16.833810000 +0200
++++ gcc-7.3.0-patched/gcc/ira.c	2018-11-29 15:40:16.902301000 +0100
+@@ -4889,7 +4889,10 @@
+   bitmap_head need_new, reachable;
+   vec<basic_block> queue;
+ 
+-  if (!SHRINK_WRAPPING_ENABLED)
++	/* Restore 4.9 behavior of splitting live range even if target does
++		 not have simple_return. This helps fix code size increase for the
++		 avr target - see AVRTC-804 */
++  if (!flag_shrink_wrap)
+     return false;
+ 
+   bitmap_initialize (&need_new, 0);
+Only in gcc-7.3.0-patched/gcc: ira.c.orig
+Only in gcc-7.3.0-patched/gcc: reload1.c.rej
+Only in gcc-7.3.0-patched/gcc: reload.c.rej
+diff -ur gcc/gcc/testsuite/gcc.c-torture/compile/limits-externdecl.c gcc-7.3.0-patched/gcc/testsuite/gcc.c-torture/compile/limits-externdecl.c
+--- gcc/gcc/testsuite/gcc.c-torture/compile/limits-externdecl.c	2015-08-21 15:13:42.953203000 +0200
++++ gcc-7.3.0-patched/gcc/testsuite/gcc.c-torture/compile/limits-externdecl.c	2018-11-29 15:40:20.125634357 +0100
+@@ -55,4 +55,4 @@
+ REFERENCE references[] = {
+   LIM5 (X)
+   0
+-};
++}; /* { dg-error "size of array is too large" "" { target avr-*-* } } */
+Only in gcc-7.3.0-patched/gcc/testsuite/gcc.dg: stack-usage-1.c.rej
+Only in gcc-7.3.0-patched/gcc/testsuite/gcc.target/avr/torture: builtins-error.c.rej
+diff -ur gcc/gcc/testsuite/lib/target-supports.exp gcc-7.3.0-patched/gcc/testsuite/lib/target-supports.exp
+--- gcc/gcc/testsuite/lib/target-supports.exp	2017-11-21 10:31:12.135035000 +0100
++++ gcc-7.3.0-patched/gcc/testsuite/lib/target-supports.exp	2018-11-29 15:40:24.152301052 +0100
+@@ -7948,6 +7948,24 @@
+     }
+ }
+ 
++
++# Return 1 if this is a reduced AVR Tiny core.  Such cores have different
++# register set, instruction set, addressing capabilities and ABI.
++
++proc check_effective_target_avr_tiny { } {
++    if { [istarget avr*-*-*] } {
++        return [check_no_compiler_messages avr_tiny object {
++            #ifdef __AVR_TINY__
++            int dummy;
++            #else
++            #error target not a reduced AVR Tiny core
++            #endif
++        }]
++    } else {
++        return 0
++    }
++}
++
+ # Return 1 if <fenv.h> is available with all the standard IEEE
+ # exceptions and floating-point exceptions are raised by arithmetic
+ # operations.  (If the target requires special options for "inexact"
+Only in gcc-7.3.0-patched/gcc/testsuite/lib: target-supports.exp.orig
+diff -ur gcc/gcc/tree.h gcc-7.3.0-patched/gcc/tree.h
+--- gcc/gcc/tree.h	2017-11-29 23:13:34.210836000 +0100
++++ gcc-7.3.0-patched/gcc/tree.h	2018-11-29 15:40:24.152301052 +0100
+@@ -21,6 +21,7 @@
+ #define GCC_TREE_H
+ 
+ #include "tree-core.h"
++#include "machmode.h"
+ 
+ /* Convert a target-independent built-in function code to a combined_fn.  */
+ 
+Only in gcc/gmp: gmp-5.0.2
+Only in gcc/mpc: mpc-0.9
+Only in gcc/mpfr: mpfr-3.1.0
