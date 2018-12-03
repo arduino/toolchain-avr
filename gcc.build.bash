@@ -58,6 +58,9 @@ fi
 tar xfv gcc-7.3.0.tar.xz
 mv gcc-7.3.0 gcc
 
+# Apply the right patchset
+cd gcc && patch -p1 < ../avr-gcc-patches/atmel-patches-gcc.7.3.0-arduino2.patch && cd ..
+
 #pushd gcc
 #pushd gcc/config/avr/
 #sh genopt.sh avr-mcus.def > avr-tables.opt
