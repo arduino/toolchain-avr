@@ -1545,6 +1545,17 @@ diff -ur gcc/gcc/config/avr/t-avr gcc-7.3.0-patched/gcc/config/avr/t-avr
 -	$(AWK) -f $< -v FORMAT=Makefile   $< $(AVR_MCUS) > $@
 +	$(AWK) -f $< $< $(AVR_MCUS) > $@
 Only in gcc-7.3.0-patched/gcc/config/avr: t-avr.orig
+diff -ur gcc/gcc/config/avr/specs.h gcc-7.3.0-patched/gcc/config/avr/specs.h
+--- gcc/gcc/config/avr/specs.h  2017-01-01 13:07:43.905435000 +0100
++++ gcc-7.3.0-patched/gcc/config/avr/specs.h  2018-12-03 12:12:09.734746759 +0100
+@@ -35,6 +35,7 @@
+   "%(cc1_n_flash) "                             \
+   "%(cc1_errata_skip) "                         \
+   "%(cc1_rmw) "                                 \
++  "%(cc1_non_bit_addressable_registers_mask) "  \
+   "%(cc1_absdata) "
+ 
+ #undef  CC1PLUS_SPEC
 diff -ur gcc/gcc/config/avr/t-multilib gcc-7.3.0-patched/gcc/config/avr/t-multilib
 --- gcc/gcc/config/avr/t-multilib	2017-01-01 13:07:43.905435000 +0100
 +++ gcc-7.3.0-patched/gcc/config/avr/t-multilib	2018-11-29 16:08:58.825647392 +0100
@@ -1553,10 +1564,10 @@ diff -ur gcc/gcc/config/avr/t-multilib gcc-7.3.0-patched/gcc/config/avr/t-multil
  # <http://www.gnu.org/licenses/>.
  
 -MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8
-+MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8 mshort-calls
++MULTILIB_OPTIONS = mmcu=avr2/mmcu=avr25/mmcu=avr3/mmcu=avr31/mmcu=avr35/mmcu=avr4/mmcu=avr5/mmcu=avr51/mmcu=avr6/mmcu=avrxmega2/mmcu=avrxmega3/mmcu=avrxmega4/mmcu=avrxmega5/mmcu=avrxmega6/mmcu=avrxmega7/mmcu=avrtiny msp8 mshort-calls
  
 -MULTILIB_DIRNAMES =  avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack avr25/tiny-stack
-+MULTILIB_DIRNAMES = avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack short-calls
++MULTILIB_DIRNAMES = avr2 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega2 avrxmega3 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny tiny-stack short-calls
  
 -MULTILIB_EXCEPTIONS = \
 -	mmcu=avr3/msp8 \
@@ -1584,6 +1595,8 @@ diff -ur gcc/gcc/config/avr/t-multilib gcc-7.3.0-patched/gcc/config/avr/t-multil
 +	mmcu=avr51 \
 +	mmcu=avr6 \
 +	mmcu=avrxmega2 \
++	mmcu=avrxmega3/mshort-calls \
++	mmcu=avrxmega3 \
 +	mmcu=avrxmega4 \
 +	mmcu=avrxmega5 \
 +	mmcu=avrxmega6 \
