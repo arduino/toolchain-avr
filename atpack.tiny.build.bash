@@ -20,10 +20,10 @@ source build.conf
 mkdir -p atpack
 cd atpack
 rm -rf *
-mv ../${ATMEL_ATMEGA_PACK_FILENAME}.atpack .
+mv ../${ATMEL_ATTINY_PACK_FILENAME}.atpack .
 
-mv ${ATMEL_ATMEGA_PACK_FILENAME}.atpack ${ATMEL_ATMEGA_PACK_FILENAME}.zip
-unzip ${ATMEL_ATMEGA_PACK_FILENAME}.zip
+mv ${ATMEL_ATTINY_PACK_FILENAME}.atpack ${ATMEL_ATTINY_PACK_FILENAME}.zip
+unzip ${ATMEL_ATTINY_PACK_FILENAME}.zip
 
 ALL_FILES=`find ../objdir`
 
