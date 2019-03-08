@@ -69,10 +69,10 @@ for x in $ALL_DEVICE_SPECS; do
   DEFINITION=`cat ../objdir/lib/gcc/avr/${GCC_VERSION}/device-specs/${x} | grep __AVR_DEVICE_NAME__ | cut -f1 -d" " | cut -f2 -d"D"`
   FANCY_NAME=`cat ../objdir/lib/gcc/avr/${GCC_VERSION}/device-specs/${x} | grep __AVR_DEVICE_NAME__ | cut -f2 -d"="`
   LOWERCASE_DEFINITION="${DEFINITION,,}"
-  HEADER_TEMP="${LOWERCASE_DEFINITION#__avr_atmega}"
+  HEADER_TEMP="${LOWERCASE_DEFINITION#__avr_attiny}"
   HEADER="${HEADER_TEMP%__}"
   _DEFINITION="#elif defined (${DEFINITION})"
-  _HEADER="#  include <avr/iom${HEADER}.h>"
+  _HEADER="#  include <avr/iotn${HEADER}.h>"
   if [ "$(grep -c "${DEFINITION}" ../objdir/avr/include/avr/io.h)" == 0 ]; then
     NEWFILE=`awk '/iom3000.h/ { print; print "____DEFINITION____"; print "____HEADER____"; next }1' ../objdir/avr/include/avr/io.h | sed "s/____DEFINITION____/$_DEFINITION/g" |  sed "s@____HEADER____@$_HEADER@g"`
     echo "$NEWFILE" > ../objdir/avr/include/avr/io.h
