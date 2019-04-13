@@ -1,0 +1,12 @@
+--- a/libcpp/lex.c	2018/06/15 07:25:13	261620
++++ b/libcpp/lex.c	2018/06/15 08:51:28	261621
+@@ -568,7 +568,7 @@
+     {
+       vc m_nl, m_cr, m_bs, m_qm;
+ 
+-      data = *((const vc *)s);
++      data = __builtin_vec_vsx_ld (0, s);
+       s += 16;
+ 
+       m_nl = (vc) __builtin_vec_cmpeq(data, repl_nl);
+
