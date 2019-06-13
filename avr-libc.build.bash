@@ -74,6 +74,13 @@ cd objdir
 PREFIX=`pwd`
 cd -
 
+export OLDPATH="$PATH"
+
+# Add to path only if we are not cross compiling
+if [[ x$CROSS_COMPILE == "x" ]]; then
+export PATH="$PREFIX/bin:$PATH"
+fi
+
 mkdir -p avr-libc-build
 cd avr-libc-build
 
@@ -84,13 +91,14 @@ CONFARGS=" \
 	--libdir=$PREFIX/lib \
 	--disable-doc"
 
-PATH=$PREFIX/bin:$PATH CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc/configure $CONFARGS
+CC="avr-gcc" CXX="avr-g++" CFLAGS="-w -Os $CFLAGS" CXXFLAGS="-w -Os $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../avr-libc/configure $CONFARGS
 
 if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-PATH=$PREFIX/bin:$PATH nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS
 
-PATH=$PREFIX/bin:$PATH make install
+make install
 
+export PATH="$OLDPATH"
