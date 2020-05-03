@@ -99,15 +99,10 @@ rm -rf toolsdir objdir *-build
 
 rm -rf objdir/{info,man,share}
 
-if [[ -f ${ATMEL_ATMEGA_PACK_FILENAME}.atpack ]] ; then
-#add extra files from atpack (only if the package is altrady there)
 ${BASH} ./atpack.build.bash
-fi
-
-if [[ -f ${ATMEL_ATTINY_PACK_FILENAME}.atpack ]] ; then
-#add extra files from atpack (only if the package is altrady there)
 ${BASH} ./atpack.tiny.build.bash
-fi
+${BASH} ./atpack.Dx.build.bash
+
 
 # if producing a windows build, compress as zip and
 # copy *toolchain-precompiled* content to any folder containing a .exe
