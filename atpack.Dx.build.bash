@@ -17,15 +17,15 @@
 
 source build.conf
 
-wget ${ATMEL_ATTINY_PACK_URL}
+wget ${ATMEL_DX_PACK_URL}
 
 mkdir -p atpack
 cd atpack
 rm -rf *
-mv ../${ATMEL_ATTINY_PACK_FILENAME}.atpack .
+mv ../${ATMEL_DX_PACK_FILENAME}.atpack .
 
-mv ${ATMEL_ATTINY_PACK_FILENAME}.atpack ${ATMEL_ATTINY_PACK_FILENAME}.zip
-unzip ${ATMEL_ATTINY_PACK_FILENAME}.zip
+mv ${ATMEL_DX_PACK_FILENAME}.atpack ${ATMEL_DX_PACK_FILENAME}.zip
+unzip ${ATMEL_DX_PACK_FILENAME}.zip
 
 ALL_FILES=`find ../objdir`
 
@@ -67,20 +67,29 @@ done
 
 # 4 - extract the correct includes and add them to io.h
 # ARGH! difficult!
+echo "STARTING THE MAGIC"
 for x in $ALL_DEVICE_SPECS; do
-  DEFINITION=`cat ../objdir/lib/gcc/avr/${GCC_VERSION}/device-specs/${x} | grep __AVR_DEVICE_NAME__ | cut -f1 -d" " | cut -f2 -d"D"`
+  DEFINITION=`cat ../objdir/lib/gcc/avr/${GCC_VERSION}/device-specs/${x} | grep __AVR_DEVICE_NAME__ | cut -f 1 -d " " | cut -b 4-`
   FANCY_NAME=`cat ../objdir/lib/gcc/avr/${GCC_VERSION}/device-specs/${x} | grep __AVR_DEVICE_NAME__ | cut -f2 -d"="`
+  echo $DEFINITION
+  echo $FANCY_NAME
   LOWERCASE_DEFINITION="${DEFINITION,,}"
-  HEADER_TEMP="${LOWERCASE_DEFINITION#__avr_attiny}"
+  echo $LOWERCASE_DEFINITION
+  HEADER_TEMP="${LOWERCASE_DEFINITION#__avr_}"
+  echo $HEADER_TEMP
   HEADER="${HEADER_TEMP%__}"
+  echo $HEADER
   _DEFINITION="#elif defined (${DEFINITION})"
-  _HEADER="#  include <avr/iotn${HEADER}.h>"
+  echo $__DEFINITION
+  _HEADER="#  include <avr/io${HEADER}.h>"
+  echo $__HEADER
   if [ "$(grep -c "${DEFINITION}" ../objdir/avr/include/avr/io.h)" == 0 ]; then
     NEWFILE=`awk '/iom3000.h/ { print; print "____DEFINITION____"; print "____HEADER____"; next }1' ../objdir/avr/include/avr/io.h | sed "s/____DEFINITION____/$_DEFINITION/g" |  sed "s@____HEADER____@$_HEADER@g"`
+    echo $NEWFILE
     echo "$NEWFILE" > ../objdir/avr/include/avr/io.h
   fi
 done
-
+echo "ENDING THE MAGIC"
 #NEW_ALL_FILES=`find ../objdir`
 
 #echo "NEW FILES ADDED: "
