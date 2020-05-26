@@ -40,7 +40,7 @@ fi
 tar xf avr-binutils.tar.bz2
 
 cd binutils
-#for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
+for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done
 autoconf
 cd ld
 autoreconf
