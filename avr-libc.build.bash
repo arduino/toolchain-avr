@@ -41,7 +41,7 @@ if [[ $OS == "Msys" || $OS == "Cygwin" ]] ; then
 else
 	EXCLUDE=""
 fi
-tar xfv avr-libc.tar.bz2 $EXCLUDE
+tar xf avr-libc.tar.bz2 $EXCLUDE
 mv libc/avr-libc .
 rmdir libc
 

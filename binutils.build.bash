@@ -37,7 +37,7 @@ if [[ ! -f avr-binutils.tar.bz2  ]] ;
 then
 	wget $AVR_SOURCES/avr-binutils.tar.bz2
 fi
-tar xfv avr-binutils.tar.bz2
+tar xf avr-binutils.tar.bz2
 
 cd binutils
 #for p in ../binutils-patches/*.patch; do echo Applying $p; patch -p1 < $p; done

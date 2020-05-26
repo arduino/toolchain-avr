@@ -34,28 +34,28 @@ then
 	wget ${GMP_SOURCE}
 fi
 
-tar xfv gmp-${GMP_VERSION}.tar.bz2
+tar xf gmp-${GMP_VERSION}.tar.bz2
 
 if [[ ! -f mpfr-${MPFR_VERSION}.tar.bz2  ]] ;
 then
 	wget ${MPFR_SOURCE}
 fi
 
-tar xfv mpfr-${MPFR_VERSION}.tar.bz2
+tar xf mpfr-${MPFR_VERSION}.tar.bz2
 
 if [[ ! -f mpc-${MPC_VERSION}.tar.gz  ]] ;
 then
 	wget ${MPC_SOURCE}
 fi
 
-tar xfv mpc-${MPC_VERSION}.tar.gz
+tar xf mpc-${MPC_VERSION}.tar.gz
 
 if [[ ! -f gcc-7.3.0.tar.xz ]] ;
 then
 	wget https://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
 fi
 
-tar xfv gcc-7.3.0.tar.xz
+tar xf gcc-7.3.0.tar.xz
 mv gcc-7.3.0 gcc
 
 # Apply the right patchset

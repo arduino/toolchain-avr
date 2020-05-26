@@ -38,7 +38,7 @@ then
 	wget $AVR_SOURCES/avr-gdb.tar.bz2
 fi
 
-tar xfv avr-gdb.tar.bz2
+tar xf avr-gdb.tar.bz2
 
 cd gdb
 for p in ../avr-gdb-patches/*.patch
