@@ -1559,7 +1559,7 @@ diff -ur gcc/gcc/config/avr/specs.h gcc-7.3.0-patched/gcc/config/avr/specs.h
 diff -ur gcc/gcc/config/avr/t-multilib gcc-7.3.0-patched/gcc/config/avr/t-multilib
 --- gcc/gcc/config/avr/t-multilib	2017-01-01 13:07:43.905435000 +0100
 +++ gcc-7.3.0-patched/gcc/config/avr/t-multilib	2018-11-29 16:08:58.825647392 +0100
-@@ -21,21 +21,24 @@
+@@ -21,21 +21,26 @@
  # along with GCC; see the file COPYING3.  If not see
  # <http://www.gnu.org/licenses/>.
  
