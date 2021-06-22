@@ -61,7 +61,6 @@ CONFARGS=" \
 	--disable-nls \
 	--disable-werror \
 	--with-guile=guile-2.0 \
-	--disable-binutils \
 	--target=avr"
 
 CFLAGS="-w -O2 -g0 $CFLAGS" CXXFLAGS="-w -O2 -g0 $CXXFLAGS" LDFLAGS="-s $LDFLAGS" ../gdb/configure $CONFARGS $EXTRA_CONFARGS
@@ -70,7 +69,7 @@ if [ -z "$MAKE_JOBS" ]; then
 	MAKE_JOBS="2"
 fi
 
-nice -n 10 make -j $MAKE_JOBS
+nice -n 10 make -j $MAKE_JOBS all-gdb
 
 # New versions of gdb share the same configure/make scripts with binutils. Running make install-gdb to
 # install just the gdb binaries.
