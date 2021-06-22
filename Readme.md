@@ -2,14 +2,14 @@
 
 This is the AVR Toolchain used in the [Arduino IDE](http://arduino.cc/).
 
-As soon as Atmel [ships a newer toolchain](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/), we pull the source code, **patch it** with some user contributed patches and deliver it with the [Arduino IDE](http://arduino.cc/).
+As soon as Atmel [ships a newer toolchain](https://www.microchip.com/mplab/avr-support/avr-and-sam-downloads-archive), we pull the source code, **patch it** with some user contributed patches and deliver it with the [Arduino IDE](http://arduino.cc/).
 Therefore, the resulting binaries may differ significantly from Atmel's. And you should start blaming us if things are not working as expected :)
 
 ### Configuring
 
-Edit the `build.conf` file, currently the only thing worth changing is `AVR_VERSION` on the first line to match whatever the [latest version is](http://distribute.atmel.no/tools/opensource/Atmel-AVR-GNU-Toolchain/).
+Edit the `build.conf` file, currently the only thing worth changing is `AVR_VERSION` on the first line to match whatever the [latest version is](https://www.microchip.com/mplab/avr-support/avr-and-sam-downloads-archive).
 
-At time of writing, the latest toolchain available is based on Atmel 3.6.1 version, but we replaced gcc component with a newer one, porting Atmel patches. It contains:
+At time of writing, the latest toolchain available is based on Atmel 3.6.2 version, but we replaced gcc component with a newer one, porting Atmel patches. It contains:
  - binutils-2.26
  - gcc-7.3.0 (patches here https://github.com/arduino/toolchain-avr/tree/staging/avr-gcc-patches)
  - avr-libc-2.0.0
